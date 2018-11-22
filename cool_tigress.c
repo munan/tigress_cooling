@@ -3,11 +3,11 @@
 /*==============================================================================
  * FILE: cool_tigress.c
  *
- * PURPOSE: heating and cooling function for TIGRESS simulations.
+ * PURPOSE: heating and cooling functions for TIGRESS simulations.
  *
  * REFERENCES: 
- * Gong, Ostriker and wolfire (2017) -- neutral and molecular gas (T<=1.2e4 K)
- * Wiersma, Schaye, and Smith (2008) -- hot gas (T>1.2e4 K)
+ * Gong, Ostriker and wolfire (2017) -- neutral and molecular gas 
+ * Wiersma, Schaye, and Smith (2008) -- hot gas 
  *
  * METHODS:
  * Estimate chemical abundances from gas and radiation parameters based on the
@@ -16,9 +16,10 @@
  * Heating: cosmic-ray (CR) heating, photo-electric heating on dust (PE), UV
  * pumping of H2
  * Cooling: Ly-alpha, OI, C+, CI, CO, recombination of e- on PAHs.
- * For hot gas (T>1.2e4 K), switch cooling to CIE cooling in
+ * For hot gas (T>10^4.2 K), switch cooling to CIE cooling in
  * Wiersma, Schaye, and Smith (2008), and scale the metal cooling with
- * metallicity.
+ * metallicity. To avoid discontinuity in the cooling rates, a log-linear
+ * interpolation is used for 4.0 < log10(T) < 4.2 
  * 
  * NOMENCLATURE:
  *

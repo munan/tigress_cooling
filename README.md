@@ -8,10 +8,13 @@ An example is included for solar neighborhood conditions with equilibrium
 temperature at a range of densities in "main.c" file (the equilibrium temperature 
 is from equilibrium chemistry calculations of Gong, Ostriker and Wolfire 2017). 
 You can run the example by 
+
 $python run.py
 
 Then you can use the ipython notebook
+
 tigress_cooling.ipynb
+
 in the "script/" folder to plot the results compared to the original TIGRESS
 heating and cooling rates (Koyama and Inutsuka 2002).
 
