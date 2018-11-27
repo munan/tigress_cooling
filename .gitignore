@@ -3,5 +3,5 @@
 *.swp
 *.exe
 *.pyc
-Makefile
+*.dylib
 out/
