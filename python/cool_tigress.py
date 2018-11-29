@@ -274,7 +274,7 @@ def coolingCI(x_e, x_CI, x_HI, x_H2, nH, T):
     Compute cooling rate per H by OI [erg s^-1 H^-1]
     """
     loadlib()
-    return __libptr.coolingCII(x_e, x_CI, x_HI, x_H2, nH, T)
+    return __libptr.coolingCI(x_e, x_CI, x_HI, x_H2, nH, T)
 
 @np.vectorize
 def coolingCO(x_e, x_CO, x_HI, x_H2, nH, T, dvdr):
@@ -406,6 +406,8 @@ class CoolTigress(object):
         self.get_abundances()
         self.get_cooling()
         self.get_heating()
+
+        # (thermal pressure)/k_B [cm^-3 K]
         self.pok = self.nH*self.T*(1.1 + self.x_e - self.x_H2)
             
     def get_heating(self):
@@ -502,6 +504,7 @@ class CoolTigress(object):
         Given gas temperature and other parameters, compute nH for which
         heating is equal to cooling
         """
+
         from scipy import optimize
         def f(nH):
             x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI = \
@@ -519,7 +522,7 @@ class CoolTigress(object):
     def _set_par(self):
         self.par = dict()
         
-        # Should match in order and name input parameters in wrapper functions
+        # Should match in order and name input parameters of wrapper functions
         self.par['get_abundances'] = ['nH', 'T', 'dvdr', 'Z', 'xi_CR',
                                       'G_PE', 'G_CI', 'G_CO', 'G_H2']
         self.par['get_heating'] = ['x_e', 'x_HI', 'x_H2',
@@ -542,6 +545,7 @@ class CoolTigress(object):
         self.par['coolingCO'] = ['x_e', 'x_CO', 'x_HI', 'x_H2',
                                  'nH', 'T', 'dvdr']
         self.par['coolingRec'] = ['x_e', 'nH', 'T', 'Z_d', 'G_PE']
+
         self.par['coolingHot'] = ['T', 'Z_g']
         
     def __repr__(self):
