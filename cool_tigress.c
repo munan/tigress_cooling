@@ -521,10 +521,10 @@ Real fions(const Real x_e, const Real x_H2, const Real nH, const Real T,
 Real fe(const Real x_H2, const Real nH, const Real T,
         const Real Z_d, const Real Z_g, const Real xi_CR, 
         const Real G_PE, const Real G_CI) { 
-  const Real rtol = 5e-2;
+  const Real rtol = 1e-3;
   const Real small_x = 1e-6;
   const Real small_f = 1e-20;
-  const int maxiter = 20;
+  const int maxiter = 200;
   Real x = 0;
   Real f = 0;
   Real xnew = 0;
