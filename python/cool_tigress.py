@@ -12,7 +12,8 @@ __all__ = ['fH2', 'fCplus', 'fHplus', 'fions', 'fe', 'fCO',
            'coolingCO', 'coolingRec', 'coolingHot',
            'get_abundances',
            'get_heating', 'get_cooling',
-           '_CII_rec_rate', 'q10CII_', 'cooling2Level_', 'cooling3Level_'
+           'CII_rec_rate_', 'q10CII_', 'cooling2Level_', 'cooling3Level_',
+           'fShield_CO_V09_'
            ]
 
 # Imports
@@ -164,6 +165,9 @@ def loadlib(path=None):
                                         c_double, c_double, c_double, c_double,
                                         c_double, c_double, c_double, c_double,
                                         c_double]
+
+    __libptr.fShield_CO_V09_.restype = c_double
+    __libptr.fShield_CO_V09_.argtypes = [c_double, c_double]
         
         
 ################################################################################
@@ -374,6 +378,14 @@ def cooling3Level_(q01, q10, q02, q20, q12, q21, A10, A20, A21,
     loadlib()
     return __libptr.cooling3Level_(q01, q10, q02, q20, q12, q21,
                                    A10, A20, A21, E10, E20, E21, xs)
+
+@np.vectorize
+def fShield_CO_V09_(NCO, NH2):
+    """
+    Compute CO shielding factor (Visser+09 Table 5)
+    """
+    loadlib()
+    return __libptr.fShield_CO_V09_(NCO, NH2)
 
 #########################################################################
 # Define a class to call wrappers more conveniently                     #
