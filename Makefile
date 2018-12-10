@@ -1,15 +1,16 @@
-prob = main.c
-exe = main.exe
 SHELL = /bin/sh
 
 CC	= gcc
+CXX	= g++
+
 #CFLAGS = -Wall -g3 -O0 -ggdb
 CFLAGS 	= -Wall -O3
 LIBS	= -lm
+LIBNAME = cool_tigress
 
 OS	:= $(shell uname)
 ifeq ($(OS), Darwin)
-	CLIBFLAGS	= -MP
+	CLIBFLAGS	= -MP -fPIC
 	DYNLIBFLAG	= -dynamiclib
 	LIBEXT		= dylib
 else ifeq ($(OS), Linux)
@@ -18,35 +19,33 @@ else ifeq ($(OS), Linux)
         LIBEXT		= so
 endif
 
-#source files
-SRCS = $(prob) cool_tigress.c
-
-#object files
-OBJS = $(SRCS:.cc=.o)
-
-#executable
-PROJ= $(exe)
-
 # -----------------------------------------------------------------------------------------
 
-.PHONY: depend clean
+.PHONY: depend clean lib
 
-all: $(PROJ)
+all: main lib
 
-lib:	
-	$(CC) $(CFLAGS) $(CLIBFLAGS) -c -o cool_tigress.o cool_tigress.c
-	$(CC) $(CFLAGS) $(CLIBFLAGS) $(DYNLIBFLAG) -o cool_tigress.$(LIBEXT) cool_tigress.o
+main:
+	$(CXX) $(CFLAGS) $(CLIBFLAGS) $(DYNLIBFLAG) linecool.cpp -o liblinecool.$(LIBEXT)
+	$(CXX) $(CFLAGS) $(CLIBFLAGS) $(DYNLIBFLAG) -L. -llinecool linecool_c_wrapper.cpp -o liblinecool_c_wrapper.$(LIBEXT)
+	$(CC) $(CLIBFLAGS) $(DYNLIBFLAG) cool_tigress.c -L. -llinecool_c_wrapper -o $(LIBNAME).$(LIBEXT)
+	#$(CC) main.c -L. -llinecool_c_wrapper -o a
 
-$(PROJ): $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(CLIBFLAGS) $(LIBS) 
+lib:
+	$(CXX) -c $(CFLAGS) $(CLIBFLAGS) linecool.cpp
+	$(CXX) -c $(CFLAGS) $(CLIBFLAGS) linecool_c_wrapper.cpp
+	$(CC) -c $(CFLAGS) $(CLIBFLAGS) cool_tigress.c
+	$(CC) $(CLIBFLAGS) $(DYNLIBFLAG) -lstdc++ -o $(LIBNAME).$(LIBEXT) cool_tigress.o linecool_c_wrapper.o linecool.o
 
-.cc.o:
-	$(CC) $(CFLAGS) $(CLIBFLAGS) -c $< -o $@
+%.o : %.c
+	$(CC) -c $(CFLAGS) $(CLIBFLAGS) $< -o $@
+
+%.o : %.cpp
+	$(CXX) -c $(CFLAGS) $(CLIBFLAGS) $< -o $@
 
 clean:
-	$(RM) *.o *.dylib *.so
+	$(RM) *.o *.$(LIBEXT)
 	$(RM) .depend
-	$(RM) *.exe
 
 depend: $(SRCS)
 	makedepend  $^

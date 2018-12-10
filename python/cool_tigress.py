@@ -13,22 +13,70 @@ __all__ = ['fH2', 'fCplus', 'fHplus', 'fions', 'fe', 'fCO',
            'get_abundances',
            'get_heating', 'get_cooling',
            'CII_rec_rate_', 'q10CII_', 'cooling2Level_', 'cooling3Level_',
-           'fShield_CO_V09_'
+           'fShield_CO_V09_',
+           # From linecool
+           'get_A',
+           'get_energy_diff'           
+           'get_statistical_weight',
+           'get_linecooling_5lv'
            ]
 
 # Imports
 import numpy as np
 import pandas as pd
 import numpy.ctypeslib as npct
-from ctypes import c_double, c_int, c_bool, pointer, POINTER, Structure, byref
+from ctypes import c_double, c_int, c_uint8, c_bool, pointer, POINTER, Structure, byref
+from aenum import IntEnum, NoAlias
 import os
 
 # # Utility type definition
+
 LP_c_double = POINTER(c_double)
 # array_1d_double = npct.ndpointer(dtype=np.double, ndim=1,
 #                                  flags="CONTIGUOUS")
 # array_1d_int = npct.ndpointer(dtype=c_int, ndim=1,
 #                               flags="CONTIGUOUS")
+
+class CtypesEnum(IntEnum):
+    """A ctypes-compatible IntEnum superclass."""
+    @classmethod
+    def from_param(cls, obj):
+        return int(obj)
+
+class LineCoolElemEnum(CtypesEnum):
+    
+    # https://stackoverflow.com/questions/31537316/python-enums-with-duplicate-values
+    _settings_ = NoAlias
+    
+    NI = 0
+    NII = 1
+    OI = 2
+    OII = 3
+    OIII = 4
+    NeIII = 5
+    SII = 6
+    SIII = 7
+    CII = 8
+    CIII = 9
+    NIII = 10
+    NELEM_5LV = 10
+    NeII = 11
+    SIV = 12
+    NELEM = 13
+
+class LineCoolTransitionEnum(CtypesEnum):
+
+    T01 = 0
+    T02 = 1
+    T03 = 2
+    T04 = 3
+    T12 = 4
+    T13 = 5
+    T14 = 6
+    T23 = 7
+    T24 = 8
+    T34 = 9
+    NTRANS = 10
 
 # Persistent value to hold pointer to c library
 __libptr = None
@@ -61,7 +109,6 @@ def loadlib(path=None):
     if path is None:
         path = os.path.join(os.path.dirname(__file__), '..')
         
-    # Load library
     __libptr = npct.load_library("cool_tigress",
                                  os.path.realpath(path))
 
@@ -168,8 +215,20 @@ def loadlib(path=None):
 
     __libptr.fShield_CO_V09_.restype = c_double
     __libptr.fShield_CO_V09_.argtypes = [c_double, c_double]
-        
-        
+
+    __libptr.get_A.restype = c_double
+    __libptr.get_A.argtypes = [LineCoolElemEnum, c_int]
+
+    __libptr.get_energy_diff.restype = c_double
+    __libptr.get_energy_diff.argtypes = [LineCoolElemEnum, c_int]
+
+    __libptr.get_statistical_weight.restype = c_double
+    __libptr.get_statistical_weight.argtypes = [LineCoolElemEnum, c_uint8]        
+
+    __libptr.get_linecooling_5lv.restype = c_double
+    __libptr.get_linecooling_5lv.argtypes = [LineCoolElemEnum, c_double,
+                                             c_double, c_double]
+
 ################################################################################
 # Python wrappers to c routines
 # The use of np.vectorize makes the code numpy-aware but doesn't make it faster.
@@ -386,6 +445,38 @@ def fShield_CO_V09_(NCO, NH2):
     """
     loadlib()
     return __libptr.fShield_CO_V09_(NCO, NH2)
+
+@np.vectorize
+def get_A(elem, trans):
+    """
+    Get Einstein A coefficient for transition [s^-1]
+    """
+    loadlib()
+    return __libptr.get_A(elem, trans)
+
+@np.vectorize
+def get_energy_diff(elem, trans):
+    """
+    Get energy difference
+    """
+    loadlib()
+    return __libptr.get_energy_diff(elem, trans)
+
+@np.vectorize
+def get_statistical_weight(elem, level):
+    """
+    Get Einstein coefficient for transition
+    """
+    loadlib()
+    return __libptr.get_statistical_weight(elem, level)
+
+@np.vectorize
+def get_linecooling_5lv(elem, T, ne, abundance):
+    """
+    Get line cooling rate [erg s^-1 H^-1]
+    """
+    loadlib()
+    return __libptr.get_linecooling_5lv(elem, T, ne, abundance)
 
 #########################################################################
 # Define a class to call wrappers more conveniently                     #

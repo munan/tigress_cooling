@@ -92,16 +92,13 @@
  *============================================================================*/
 
 #include "cool_tigress.h" //TODO: merge header into prototypes.h
+#include "linecool_c_wrapper.hpp"
+#define SHIELDING
+
 //TODO: include ../defs.h which has definition of MIN and MAX, then delete the
 //two definitions below
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-#define SHIELDING
-
-#define len_hot_ 262
-#define lenTCO_ 11
-#define lenNeffCO_ 11
 
 /*elemental abundances*/
 static const Real xCstd=1.6e-4, xOstd=3.2e-4, xHetot=0.1;
@@ -148,6 +145,8 @@ static const Real E21OI_ = 1.365e-14;
 /*-----CO cooling table data, from Omukai+2010-----*/
 //static const int lenTCO_ = 11;
 //static const int lenNeffCO_ = 11;
+#define lenTCO_ 11
+#define lenNeffCO_ 11
 static const Real TCO_[lenTCO_] = {10,	20,	30,	50,	80,	100,
                                    300,	600,	1000,	1500,	2000};
 static const Real NeffCO_[lenNeffCO_] = {14.0, 14.5, 15.0, 15.5, 16.0, 16.5,
@@ -196,6 +195,7 @@ static const Real alphaCO_[lenNeffCO_*lenTCO_] = {
 
 /*-----Cooling for hot gas, Wiersma, Schaye, and Smith (2008)-----*/
 //static const int len_hot_ = 262;
+#define len_hot_ 262
 static const Real log10T_hot_[len_hot_] = {
  3.79022181, 3.81011149, 3.82999809, 3.84989215, 3.86978304, 3.88967699,
  3.90956673, 3.9294598 , 3.94935097, 3.9692388 , 3.98913377, 4.00902574,
@@ -520,6 +520,9 @@ Real LP2Di_(const Real *xarr, const Real *yarr,
 #ifdef SHIELDING
 Real fShield_CO_V09_(const Real NCO, const Real NH2);
 #endif  // SHIELDING
+
+Real get_trans_prob(enum LineCool5LvElem element,
+		    enum LineCoolTransition transition);
 
 /*----------------------------------------------------------------------------*/
 /* IMPLEMENTATION of FUCNTIONS                                                */
@@ -1132,3 +1135,27 @@ Real fShield_CO_V09_(const Real NCO, const Real NH2) {
   return exp(fl);
 }
 #endif  // SHIELDING
+
+// linecool wrappers
+
+// Transition probability for deexcitation (in s^-1).
+Real get_A(enum LineCool5LvElem element,
+	   enum LineCoolTransition transition) {
+  return get_A_(element, transition);
+}
+
+Real get_energy_diff(enum LineCool5LvElem element,
+		     enum LineCoolTransition transition) {
+  return get_energy_diff_(element, transition);
+}
+
+Real get_statistical_weight(enum LineCool5LvElem element,
+			    uint8_t level) {
+  return get_statistical_weight_(element, level);
+}
+
+Real get_linecooling_5lv(enum LineCool5LvElem element, double temperature,
+                         double electron_density, double abundance) {
+  return get_linecooling_5lv_(element, temperature,
+                              electron_density, abundance);
+}

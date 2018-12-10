@@ -1,5 +1,6 @@
-#include <math.h>
 #include <stdio.h>
+#include <math.h>
+#include <stdint.h>
 #include <stdbool.h>
 #define Real double //TODO:replace this by include defs.in file in athena
 
@@ -19,4 +20,3 @@ Real get_cooling(const Real x_e, const Real x_HI, const Real x_H2,
 		 const Real x_CO, const Real x_OI, 
 		 const Real nH, const Real T, const Real dvdr,
 		 const Real Z, const Real G_PE);
-

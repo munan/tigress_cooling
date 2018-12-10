@@ -1,0 +1,1921 @@
+/*******************************************************************************
+ * This file is taken from CMacIonize
+ * https://github.com/bwvdnbro/CMacIonize/blob/master/src/LineCoolingData.cpp
+ * commit: c2885a0fe9176ecbb730476347d7aa9140a45ac5
+ * 
+ * Copyright (C) 2016 Bert Vandenbroucke (Original Author)
+ * 
+ ******************************************************************************/
+
+#include "linecool.hpp"
+#include <cmath>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
+// Constructor. Initializes the data values.
+LineCool::LineCool() {
+
+  /// some energy conversion constants (for energy differences)
+
+  // conversion factor from cm^-1 to K
+  const double hc_over_k = 1.43877735;
+  // conversion factor from eV to K
+  const double eV_over_k = 11604.5220604;
+  // conversion factor from Ry to K
+  const double Ry_over_k = 157887.56467866;
+
+  /// five level elements
+  
+  /// NI
+  {
+    // data from Froese Fischer & Tachiev (2004), table 4
+    // ground state: 4S3/2
+    // excited states: 2D5/2, 2D3/2, 2P1/2, 2P3/2
+    // in cm^-1
+    const double energy_levels[4] = {19224.37, 19233.09, 28839.05, 28839.07};
+    _5lv_ginv[NI][0] = 0.25;
+    _5lv_ginv[NI][1] = 1. / 6.;
+    _5lv_ginv[NI][2] = 0.25;
+    _5lv_ginv[NI][3] = 0.5;
+    _5lv_ginv[NI][4] = 0.25;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[NI][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[NI][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // we take the sum of all transition probabilities (in s^-1)
+    _5lv_A[NI][TRANS_0_to_1] = 7.566e-6;
+    _5lv_A[NI][TRANS_0_to_2] = 2.029e-5;
+    _5lv_A[NI][TRANS_0_to_3] = 2.605e-3;
+    _5lv_A[NI][TRANS_0_to_4] = 6.504e-3;
+    _5lv_A[NI][TRANS_1_to_2] = 1.071e-8;
+    _5lv_A[NI][TRANS_1_to_3] = 3.447e-2;
+    _5lv_A[NI][TRANS_1_to_4] = 6.135e-2;
+    _5lv_A[NI][TRANS_2_to_3] = 5.272e-2;
+    _5lv_A[NI][TRANS_2_to_4] = 2.745e-2;
+    _5lv_A[NI][TRANS_3_to_4] = 9.504e-17;
+    // our own fits to the data of Tayal (2000)
+    // these fits were made with the script data/linecooling/gamma_NI.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[NI][TRANS_0_to_1][0] = 4.350e-04;
+    _5lv_coll_str[NI][TRANS_0_to_1][1] = -4.500e-04;
+    _5lv_coll_str[NI][TRANS_0_to_1][2] = 2.206e-01;
+    _5lv_coll_str[NI][TRANS_0_to_1][3] = 4.958e-05;
+    _5lv_coll_str[NI][TRANS_0_to_1][4] = 7.786e-02;
+    _5lv_coll_str[NI][TRANS_0_to_1][5] = -1.099e-07;
+    _5lv_coll_str[NI][TRANS_0_to_1][6] = -8.271e-09;
+    _5lv_coll_str[NI][TRANS_0_to_2][0] = 2.751e-06;
+    _5lv_coll_str[NI][TRANS_0_to_2][1] = -3.007e-04;
+    _5lv_coll_str[NI][TRANS_0_to_2][2] = 1.474e-01;
+    _5lv_coll_str[NI][TRANS_0_to_2][3] = 3.312e-05;
+    _5lv_coll_str[NI][TRANS_0_to_2][4] = 3.882e-01;
+    _5lv_coll_str[NI][TRANS_0_to_2][5] = -1.470e-08;
+    _5lv_coll_str[NI][TRANS_0_to_2][6] = -1.106e-09;
+    _5lv_coll_str[NI][TRANS_0_to_3][0] = 2.254e-07;
+    _5lv_coll_str[NI][TRANS_0_to_3][1] = -3.336e-05;
+    _5lv_coll_str[NI][TRANS_0_to_3][2] = 2.277e-02;
+    _5lv_coll_str[NI][TRANS_0_to_3][3] = 3.636e-06;
+    _5lv_coll_str[NI][TRANS_0_to_3][4] = 8.211e-02;
+    _5lv_coll_str[NI][TRANS_0_to_3][5] = -5.171e-09;
+    _5lv_coll_str[NI][TRANS_0_to_3][6] = -3.695e-10;
+    _5lv_coll_str[NI][TRANS_0_to_4][0] = 6.567e-06;
+    _5lv_coll_str[NI][TRANS_0_to_4][1] = -6.814e-05;
+    _5lv_coll_str[NI][TRANS_0_to_4][2] = 4.632e-02;
+    _5lv_coll_str[NI][TRANS_0_to_4][3] = 7.429e-06;
+    _5lv_coll_str[NI][TRANS_0_to_4][4] = 5.470e-02;
+    _5lv_coll_str[NI][TRANS_0_to_4][5] = -1.612e-08;
+    _5lv_coll_str[NI][TRANS_0_to_4][6] = -1.155e-09;
+    _5lv_coll_str[NI][TRANS_1_to_2][0] = 7.907e-02;
+    _5lv_coll_str[NI][TRANS_1_to_2][1] = -8.603e-03;
+    _5lv_coll_str[NI][TRANS_1_to_2][2] = 6.355e+00;
+    _5lv_coll_str[NI][TRANS_1_to_2][3] = 9.366e-04;
+    _5lv_coll_str[NI][TRANS_1_to_2][4] = 1.259e-01;
+    _5lv_coll_str[NI][TRANS_1_to_2][5] = -1.315e-06;
+    _5lv_coll_str[NI][TRANS_1_to_2][6] = -9.950e-08;
+    _5lv_coll_str[NI][TRANS_1_to_3][0] = -1.420e-02;
+    _5lv_coll_str[NI][TRANS_1_to_3][1] = -8.743e-03;
+    _5lv_coll_str[NI][TRANS_1_to_3][2] = 3.581e+00;
+    _5lv_coll_str[NI][TRANS_1_to_3][3] = 9.893e-04;
+    _5lv_coll_str[NI][TRANS_1_to_3][4] = 8.734e-01;
+    _5lv_coll_str[NI][TRANS_1_to_3][5] = -2.580e-07;
+    _5lv_coll_str[NI][TRANS_1_to_3][6] = -1.983e-08;
+    _5lv_coll_str[NI][TRANS_1_to_4][0] = -3.258e-01;
+    _5lv_coll_str[NI][TRANS_1_to_4][1] = -1.290e+00;
+    _5lv_coll_str[NI][TRANS_1_to_4][2] = 5.455e+02;
+    _5lv_coll_str[NI][TRANS_1_to_4][3] = 1.451e-01;
+    _5lv_coll_str[NI][TRANS_1_to_4][4] = -1.122e+01;
+    _5lv_coll_str[NI][TRANS_1_to_4][5] = 2.792e-06;
+    _5lv_coll_str[NI][TRANS_1_to_4][6] = 2.138e-07;
+    _5lv_coll_str[NI][TRANS_2_to_3][0] = -3.592e-01;
+    _5lv_coll_str[NI][TRANS_2_to_3][1] = -9.058e-01;
+    _5lv_coll_str[NI][TRANS_2_to_3][2] = 3.817e+02;
+    _5lv_coll_str[NI][TRANS_2_to_3][3] = 1.019e-01;
+    _5lv_coll_str[NI][TRANS_2_to_3][4] = -1.055e+01;
+    _5lv_coll_str[NI][TRANS_2_to_3][5] = 2.096e-06;
+    _5lv_coll_str[NI][TRANS_2_to_3][6] = 1.606e-07;
+    _5lv_coll_str[NI][TRANS_2_to_4][0] = -1.910e-01;
+    _5lv_coll_str[NI][TRANS_2_to_4][1] = -9.570e-02;
+    _5lv_coll_str[NI][TRANS_2_to_4][2] = 4.070e+01;
+    _5lv_coll_str[NI][TRANS_2_to_4][3] = 1.077e-02;
+    _5lv_coll_str[NI][TRANS_2_to_4][4] = -5.010e+00;
+    _5lv_coll_str[NI][TRANS_2_to_4][5] = 4.665e-07;
+    _5lv_coll_str[NI][TRANS_2_to_4][6] = 3.574e-08;
+    _5lv_coll_str[NI][TRANS_3_to_4][0] = -2.313e-03;
+    _5lv_coll_str[NI][TRANS_3_to_4][1] = -2.099e-02;
+    _5lv_coll_str[NI][TRANS_3_to_4][2] = 1.122e+01;
+    _5lv_coll_str[NI][TRANS_3_to_4][3] = 2.337e-03;
+    _5lv_coll_str[NI][TRANS_3_to_4][4] = 2.240e+00;
+    _5lv_coll_str[NI][TRANS_3_to_4][5] = -2.197e-07;
+    _5lv_coll_str[NI][TRANS_3_to_4][6] = -1.682e-08;
+  }
+
+  /// NII
+  {
+    // data from Galavis, Mendoza & Zeippen (1997), tables 4 and 5
+    // ground state: 3P0
+    // excited states: 3P1, 3P2, 1D2, 1S0
+    // in cm^-1
+    const double energy_levels[4] = {48.7, 130.8, 15316.3, 32688.9};
+    _5lv_ginv[NII][0] = 1.;
+    _5lv_ginv[NII][1] = 1. / 3.;
+    _5lv_ginv[NII][2] = 0.2;
+    _5lv_ginv[NII][3] = 0.2;
+    _5lv_ginv[NII][4] = 1.;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[NII][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[NII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // in s^-1
+    _5lv_A[NII][TRANS_0_to_1] = 2.077e-6;
+    _5lv_A[NII][TRANS_0_to_2] = 1.127e-12;
+    _5lv_A[NII][TRANS_0_to_3] = 3.554e-7;
+    _5lv_A[NII][TRANS_0_to_4] = 0.;
+    _5lv_A[NII][TRANS_1_to_2] = 7.463e-6;
+    _5lv_A[NII][TRANS_1_to_3] = 1.016e-3;
+    _5lv_A[NII][TRANS_1_to_4] = 3.297e-2;
+    _5lv_A[NII][TRANS_2_to_3] = 3.005e-3;
+    _5lv_A[NII][TRANS_2_to_4] = 1.315e-4;
+    _5lv_A[NII][TRANS_3_to_4] = 1.023;
+    // our own fits to the data of Lennon & Burke (1994)
+    // these fits were made with the script data/linecooling/gamma_NII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[NII][TRANS_0_to_1][0] = -3.483e-01;
+    _5lv_coll_str[NII][TRANS_0_to_1][1] = 4.384e-03;
+    _5lv_coll_str[NII][TRANS_0_to_1][2] = 2.059e+00;
+    _5lv_coll_str[NII][TRANS_0_to_1][3] = -4.032e-04;
+    _5lv_coll_str[NII][TRANS_0_to_1][4] = -3.391e-05;
+    _5lv_coll_str[NII][TRANS_0_to_1][5] = -1.192e-03;
+    _5lv_coll_str[NII][TRANS_0_to_1][6] = -8.966e-05;
+    _5lv_coll_str[NII][TRANS_0_to_2][0] = -2.779e-03;
+    _5lv_coll_str[NII][TRANS_0_to_2][1] = -2.640e-06;
+    _5lv_coll_str[NII][TRANS_0_to_2][2] = 2.127e-01;
+    _5lv_coll_str[NII][TRANS_0_to_2][3] = 1.368e-06;
+    _5lv_coll_str[NII][TRANS_0_to_2][4] = -7.504e-04;
+    _5lv_coll_str[NII][TRANS_0_to_2][5] = 1.570e-06;
+    _5lv_coll_str[NII][TRANS_0_to_2][6] = 1.229e-07;
+    _5lv_coll_str[NII][TRANS_0_to_3][0] = -1.472e-02;
+    _5lv_coll_str[NII][TRANS_0_to_3][1] = 2.665e-05;
+    _5lv_coll_str[NII][TRANS_0_to_3][2] = 2.965e-01;
+    _5lv_coll_str[NII][TRANS_0_to_3][3] = -2.560e-06;
+    _5lv_coll_str[NII][TRANS_0_to_3][4] = 1.796e-07;
+    _5lv_coll_str[NII][TRANS_0_to_3][5] = 1.600e-03;
+    _5lv_coll_str[NII][TRANS_0_to_3][6] = 1.209e-04;
+    _5lv_coll_str[NII][TRANS_0_to_4][0] = 2.426e-03;
+    _5lv_coll_str[NII][TRANS_0_to_4][1] = -1.170e-07;
+    _5lv_coll_str[NII][TRANS_0_to_4][2] = 3.066e-02;
+    _5lv_coll_str[NII][TRANS_0_to_4][3] = 2.803e-08;
+    _5lv_coll_str[NII][TRANS_0_to_4][4] = 2.259e-09;
+    _5lv_coll_str[NII][TRANS_0_to_4][5] = -2.924e-03;
+    _5lv_coll_str[NII][TRANS_0_to_4][6] = -2.031e-04;
+    _5lv_coll_str[NII][TRANS_1_to_2][0] = -1.015e-01;
+    _5lv_coll_str[NII][TRANS_1_to_2][1] = 6.264e-04;
+    _5lv_coll_str[NII][TRANS_1_to_2][2] = 1.559e+00;
+    _5lv_coll_str[NII][TRANS_1_to_2][3] = -5.445e-05;
+    _5lv_coll_str[NII][TRANS_1_to_2][4] = 1.428e-06;
+    _5lv_coll_str[NII][TRANS_1_to_2][5] = 5.929e-04;
+    _5lv_coll_str[NII][TRANS_1_to_2][6] = 3.183e-05;
+    _5lv_coll_str[NII][TRANS_1_to_3][0] = -1.472e-02;
+    _5lv_coll_str[NII][TRANS_1_to_3][1] = 7.995e-05;
+    _5lv_coll_str[NII][TRANS_1_to_3][2] = 8.894e-01;
+    _5lv_coll_str[NII][TRANS_1_to_3][3] = -7.680e-06;
+    _5lv_coll_str[NII][TRANS_1_to_3][4] = 5.191e-07;
+    _5lv_coll_str[NII][TRANS_1_to_3][5] = 1.661e-03;
+    _5lv_coll_str[NII][TRANS_1_to_3][6] = 1.255e-04;
+    _5lv_coll_str[NII][TRANS_1_to_4][0] = 2.426e-03;
+    _5lv_coll_str[NII][TRANS_1_to_4][1] = -3.510e-07;
+    _5lv_coll_str[NII][TRANS_1_to_4][2] = 9.197e-02;
+    _5lv_coll_str[NII][TRANS_1_to_4][3] = 8.408e-08;
+    _5lv_coll_str[NII][TRANS_1_to_4][4] = 7.197e-09;
+    _5lv_coll_str[NII][TRANS_1_to_4][5] = -2.753e-03;
+    _5lv_coll_str[NII][TRANS_1_to_4][6] = -1.912e-04;
+    _5lv_coll_str[NII][TRANS_2_to_3][0] = -1.473e-02;
+    _5lv_coll_str[NII][TRANS_2_to_3][1] = 1.333e-04;
+    _5lv_coll_str[NII][TRANS_2_to_3][2] = 1.482e+00;
+    _5lv_coll_str[NII][TRANS_2_to_3][3] = -1.280e-05;
+    _5lv_coll_str[NII][TRANS_2_to_3][4] = -1.036e-06;
+    _5lv_coll_str[NII][TRANS_2_to_3][5] = -1.390e-03;
+    _5lv_coll_str[NII][TRANS_2_to_3][6] = -1.048e-04;
+    _5lv_coll_str[NII][TRANS_2_to_4][0] = 2.425e-03;
+    _5lv_coll_str[NII][TRANS_2_to_4][1] = -5.846e-07;
+    _5lv_coll_str[NII][TRANS_2_to_4][2] = 1.533e-01;
+    _5lv_coll_str[NII][TRANS_2_to_4][3] = 1.401e-07;
+    _5lv_coll_str[NII][TRANS_2_to_4][4] = -1.952e-07;
+    _5lv_coll_str[NII][TRANS_2_to_4][5] = 1.690e-04;
+    _5lv_coll_str[NII][TRANS_2_to_4][6] = 1.175e-05;
+    _5lv_coll_str[NII][TRANS_3_to_4][0] = 2.226e-02;
+    _5lv_coll_str[NII][TRANS_3_to_4][1] = -3.918e-04;
+    _5lv_coll_str[NII][TRANS_3_to_4][2] = 1.121e+00;
+    _5lv_coll_str[NII][TRANS_3_to_4][3] = 3.934e-05;
+    _5lv_coll_str[NII][TRANS_3_to_4][4] = 6.245e-06;
+    _5lv_coll_str[NII][TRANS_3_to_4][5] = -7.473e-04;
+    _5lv_coll_str[NII][TRANS_3_to_4][6] = -5.553e-05;
+  }
+
+  /// OI
+  {
+    // data from Galavis, Mendoza & Zeippen (1997), tables 6 and 7
+    // ground state: 3P2
+    // excited states: 3P1, 3P0, 1D2, 1S0
+    // in cm^-1
+    const double energy_levels[4] = {158., 227., 15868., 33793.};
+    _5lv_ginv[OI][0] = 0.2;
+    _5lv_ginv[OI][1] = 1. / 3.;
+    _5lv_ginv[OI][2] = 1.;
+    _5lv_ginv[OI][3] = 0.2;
+    _5lv_ginv[OI][4] = 1.;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[OI][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[OI][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // in s^-1
+    _5lv_A[OI][TRANS_0_to_1] = 8.865e-5;
+    _5lv_A[OI][TRANS_0_to_2] = 1.275e-10;
+    _5lv_A[OI][TRANS_0_to_3] = 6.535e-3;
+    _5lv_A[OI][TRANS_0_to_4] = 2.945e-4;
+    _5lv_A[OI][TRANS_1_to_2] = 1.772e-5;
+    _5lv_A[OI][TRANS_1_to_3] = 2.111e-3;
+    _5lv_A[OI][TRANS_1_to_4] = 7.909e-2;
+    _5lv_A[OI][TRANS_2_to_3] = 6.388e-7;
+    _5lv_A[OI][TRANS_2_to_4] = 0.;
+    _5lv_A[OI][TRANS_3_to_4] = 1.124;
+    // our own fits to the data of Zatsarinny & Tayal (2003) and Berrington
+    // (1988)
+    // these fits were made with the script data/linecooling/gamma_OI.py
+    // (this script also outputs the code below)
+    // there is only data available for fine structure transitions below
+    // 10,000 K, so we need to extrapolate for higher temperatures
+    _5lv_coll_str[OI][TRANS_0_to_1][0] = -8.839e-01;
+    _5lv_coll_str[OI][TRANS_0_to_1][1] = -6.783e-03;
+    _5lv_coll_str[OI][TRANS_0_to_1][2] = 7.448e-02;
+    _5lv_coll_str[OI][TRANS_0_to_1][3] = 1.578e-03;
+    _5lv_coll_str[OI][TRANS_0_to_1][4] = 3.239e-01;
+    _5lv_coll_str[OI][TRANS_0_to_1][5] = -2.549e-05;
+    _5lv_coll_str[OI][TRANS_0_to_1][6] = -3.727e-06;
+    _5lv_coll_str[OI][TRANS_0_to_2][0] = -7.697e-01;
+    _5lv_coll_str[OI][TRANS_0_to_2][1] = -9.788e-04;
+    _5lv_coll_str[OI][TRANS_0_to_2][2] = 1.200e-02;
+    _5lv_coll_str[OI][TRANS_0_to_2][3] = 2.477e-04;
+    _5lv_coll_str[OI][TRANS_0_to_2][4] = 9.490e-01;
+    _5lv_coll_str[OI][TRANS_0_to_2][5] = -4.462e-07;
+    _5lv_coll_str[OI][TRANS_0_to_2][6] = -7.755e-08;
+    _5lv_coll_str[OI][TRANS_0_to_3][0] = -1.093e+00;
+    _5lv_coll_str[OI][TRANS_0_to_3][1] = 1.413e+00;
+    _5lv_coll_str[OI][TRANS_0_to_3][2] = -1.373e+02;
+    _5lv_coll_str[OI][TRANS_0_to_3][3] = -1.998e-01;
+    _5lv_coll_str[OI][TRANS_0_to_3][4] = 9.365e+00;
+    _5lv_coll_str[OI][TRANS_0_to_3][5] = 3.197e-05;
+    _5lv_coll_str[OI][TRANS_0_to_3][6] = 2.514e-06;
+    _5lv_coll_str[OI][TRANS_0_to_4][0] = -1.219e+00;
+    _5lv_coll_str[OI][TRANS_0_to_4][1] = 6.529e-01;
+    _5lv_coll_str[OI][TRANS_0_to_4][2] = -5.311e+01;
+    _5lv_coll_str[OI][TRANS_0_to_4][3] = -9.393e-02;
+    _5lv_coll_str[OI][TRANS_0_to_4][4] = 4.506e+00;
+    _5lv_coll_str[OI][TRANS_0_to_4][5] = 2.706e-05;
+    _5lv_coll_str[OI][TRANS_0_to_4][6] = 2.088e-06;
+    _5lv_coll_str[OI][TRANS_1_to_2][0] = -1.016e+00;
+    _5lv_coll_str[OI][TRANS_1_to_2][1] = -6.509e-03;
+    _5lv_coll_str[OI][TRANS_1_to_2][2] = 6.884e-02;
+    _5lv_coll_str[OI][TRANS_1_to_2][3] = 1.457e-03;
+    _5lv_coll_str[OI][TRANS_1_to_2][4] = 1.015e+00;
+    _5lv_coll_str[OI][TRANS_1_to_2][5] = -1.947e-05;
+    _5lv_coll_str[OI][TRANS_1_to_2][6] = -2.390e-06;
+    _5lv_coll_str[OI][TRANS_1_to_3][0] = -1.093e+00;
+    _5lv_coll_str[OI][TRANS_1_to_3][1] = 8.480e-01;
+    _5lv_coll_str[OI][TRANS_1_to_3][2] = -8.239e+01;
+    _5lv_coll_str[OI][TRANS_1_to_3][3] = -1.199e-01;
+    _5lv_coll_str[OI][TRANS_1_to_3][4] = 3.496e+00;
+    _5lv_coll_str[OI][TRANS_1_to_3][5] = 5.140e-05;
+    _5lv_coll_str[OI][TRANS_1_to_3][6] = 4.042e-06;
+    _5lv_coll_str[OI][TRANS_1_to_4][0] = -1.219e+00;
+    _5lv_coll_str[OI][TRANS_1_to_4][1] = 3.917e-01;
+    _5lv_coll_str[OI][TRANS_1_to_4][2] = -3.187e+01;
+    _5lv_coll_str[OI][TRANS_1_to_4][3] = -5.636e-02;
+    _5lv_coll_str[OI][TRANS_1_to_4][4] = 3.302e+00;
+    _5lv_coll_str[OI][TRANS_1_to_4][5] = 2.216e-05;
+    _5lv_coll_str[OI][TRANS_1_to_4][6] = 1.709e-06;
+    _5lv_coll_str[OI][TRANS_2_to_3][0] = -1.093e+00;
+    _5lv_coll_str[OI][TRANS_2_to_3][1] = 2.827e-01;
+    _5lv_coll_str[OI][TRANS_2_to_3][2] = -2.746e+01;
+    _5lv_coll_str[OI][TRANS_2_to_3][3] = -3.996e-02;
+    _5lv_coll_str[OI][TRANS_2_to_3][4] = 2.681e+00;
+    _5lv_coll_str[OI][TRANS_2_to_3][5] = 2.234e-05;
+    _5lv_coll_str[OI][TRANS_2_to_3][6] = 1.757e-06;
+    _5lv_coll_str[OI][TRANS_2_to_4][0] = -1.219e+00;
+    _5lv_coll_str[OI][TRANS_2_to_4][1] = 1.306e-01;
+    _5lv_coll_str[OI][TRANS_2_to_4][2] = -1.062e+01;
+    _5lv_coll_str[OI][TRANS_2_to_4][3] = -1.879e-02;
+    _5lv_coll_str[OI][TRANS_2_to_4][4] = 1.964e+00;
+    _5lv_coll_str[OI][TRANS_2_to_4][5] = 1.242e-05;
+    _5lv_coll_str[OI][TRANS_2_to_4][6] = 9.578e-07;
+    _5lv_coll_str[OI][TRANS_3_to_4][0] = -1.056e+00;
+    _5lv_coll_str[OI][TRANS_3_to_4][1] = -3.587e-01;
+    _5lv_coll_str[OI][TRANS_3_to_4][2] = 3.534e+01;
+    _5lv_coll_str[OI][TRANS_3_to_4][3] = 4.778e-02;
+    _5lv_coll_str[OI][TRANS_3_to_4][4] = 1.295e+00;
+    _5lv_coll_str[OI][TRANS_3_to_4][5] = 1.089e-05;
+    _5lv_coll_str[OI][TRANS_3_to_4][6] = 6.545e-07;
+  }
+
+  /// OII
+  {
+    // data from Froese Fischer & Tachiev (2004), table 4
+    // ground state: 4S3/2
+    // excited states: 2D5/2, 2D3/2, 2P3/2, 2P1/2
+    // in cm^-1
+    const double energy_levels[4] = {26810.73, 26830.45, 40468.36, 40470.96};
+    _5lv_ginv[OII][0] = 0.25;
+    _5lv_ginv[OII][1] = 1. / 6.;
+    _5lv_ginv[OII][2] = 0.25;
+    _5lv_ginv[OII][3] = 0.25;
+    _5lv_ginv[OII][4] = 0.5;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[OII][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[OII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // we sum contributions of all types (in s^-1)
+    _5lv_A[OII][TRANS_0_to_1] = 4.124e-5;
+    _5lv_A[OII][TRANS_0_to_2] = 1.635e-4;
+    _5lv_A[OII][TRANS_0_to_3] = 5.646e-2;
+    _5lv_A[OII][TRANS_0_to_4] = 2.265e-2;
+    _5lv_A[OII][TRANS_1_to_2] = 1.241e-7;
+    _5lv_A[OII][TRANS_1_to_3] = 1.106e-1;
+    _5lv_A[OII][TRANS_1_to_4] = 5.824e-2;
+    _5lv_A[OII][TRANS_2_to_3] = 5.871e-2;
+    _5lv_A[OII][TRANS_2_to_4] = 9.668e-2;
+    _5lv_A[OII][TRANS_3_to_4] = 3.158e-10;
+    // our own fits to the data of Kisielius et al. (2009)
+    // these fits were made with the script data/linecooling/gamma_OII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[OII][TRANS_0_to_1][0] = -2.523e-03;
+    _5lv_coll_str[OII][TRANS_0_to_1][1] = -6.241e-06;
+    _5lv_coll_str[OII][TRANS_0_to_1][2] = 8.502e-01;
+    _5lv_coll_str[OII][TRANS_0_to_1][3] = 7.233e-07;
+    _5lv_coll_str[OII][TRANS_0_to_1][4] = 1.444e-03;
+    _5lv_coll_str[OII][TRANS_0_to_1][5] = 9.709e-09;
+    _5lv_coll_str[OII][TRANS_0_to_1][6] = 1.522e-09;
+    _5lv_coll_str[OII][TRANS_0_to_2][0] = -1.125e-02;
+    _5lv_coll_str[OII][TRANS_0_to_2][1] = -8.446e-07;
+    _5lv_coll_str[OII][TRANS_0_to_2][2] = 6.036e-01;
+    _5lv_coll_str[OII][TRANS_0_to_2][3] = 2.181e-07;
+    _5lv_coll_str[OII][TRANS_0_to_2][4] = -1.635e-04;
+    _5lv_coll_str[OII][TRANS_0_to_2][5] = 4.311e-08;
+    _5lv_coll_str[OII][TRANS_0_to_2][6] = -2.238e-10;
+    _5lv_coll_str[OII][TRANS_0_to_3][0] = 1.161e-02;
+    _5lv_coll_str[OII][TRANS_0_to_3][1] = -4.213e-06;
+    _5lv_coll_str[OII][TRANS_0_to_3][2] = 2.279e-01;
+    _5lv_coll_str[OII][TRANS_0_to_3][3] = 4.878e-07;
+    _5lv_coll_str[OII][TRANS_0_to_3][4] = -1.033e-11;
+    _5lv_coll_str[OII][TRANS_0_to_3][5] = 1.000e+00;
+    _5lv_coll_str[OII][TRANS_0_to_3][6] = 2.265e+00;
+    _5lv_coll_str[OII][TRANS_0_to_4][0] = 7.789e-02;
+    _5lv_coll_str[OII][TRANS_0_to_4][1] = -1.026e-05;
+    _5lv_coll_str[OII][TRANS_0_to_4][2] = 7.464e-02;
+    _5lv_coll_str[OII][TRANS_0_to_4][3] = 1.046e-06;
+    _5lv_coll_str[OII][TRANS_0_to_4][4] = 1.431e-07;
+    _5lv_coll_str[OII][TRANS_0_to_4][5] = -8.913e-04;
+    _5lv_coll_str[OII][TRANS_0_to_4][6] = -6.598e-05;
+    _5lv_coll_str[OII][TRANS_1_to_2][0] = -8.588e-01;
+    _5lv_coll_str[OII][TRANS_1_to_2][1] = -4.648e+00;
+    _5lv_coll_str[OII][TRANS_1_to_2][2] = -3.736e+02;
+    _5lv_coll_str[OII][TRANS_1_to_2][3] = -1.190e+00;
+    _5lv_coll_str[OII][TRANS_1_to_2][4] = -1.466e-06;
+    _5lv_coll_str[OII][TRANS_1_to_2][5] = -5.766e+06;
+    _5lv_coll_str[OII][TRANS_1_to_2][6] = -9.308e-01;
+    _5lv_coll_str[OII][TRANS_1_to_3][0] = -1.028e-02;
+    _5lv_coll_str[OII][TRANS_1_to_3][1] = -7.342e-05;
+    _5lv_coll_str[OII][TRANS_1_to_3][2] = 8.844e-01;
+    _5lv_coll_str[OII][TRANS_1_to_3][3] = 9.292e-06;
+    _5lv_coll_str[OII][TRANS_1_to_3][4] = -3.079e-04;
+    _5lv_coll_str[OII][TRANS_1_to_3][5] = 7.387e-06;
+    _5lv_coll_str[OII][TRANS_1_to_3][6] = 5.594e-07;
+    _5lv_coll_str[OII][TRANS_1_to_4][0] = -5.239e-02;
+    _5lv_coll_str[OII][TRANS_1_to_4][1] = -6.736e-06;
+    _5lv_coll_str[OII][TRANS_1_to_4][2] = 4.666e-01;
+    _5lv_coll_str[OII][TRANS_1_to_4][3] = 1.976e-06;
+    _5lv_coll_str[OII][TRANS_1_to_4][4] = -8.040e-04;
+    _5lv_coll_str[OII][TRANS_1_to_4][5] = 1.289e-06;
+    _5lv_coll_str[OII][TRANS_1_to_4][6] = 9.867e-08;
+    _5lv_coll_str[OII][TRANS_2_to_3][0] = -3.494e-02;
+    _5lv_coll_str[OII][TRANS_2_to_3][1] = -2.313e-05;
+    _5lv_coll_str[OII][TRANS_2_to_3][2] = 5.770e-01;
+    _5lv_coll_str[OII][TRANS_2_to_3][3] = 3.760e-06;
+    _5lv_coll_str[OII][TRANS_2_to_3][4] = -1.210e-03;
+    _5lv_coll_str[OII][TRANS_2_to_3][5] = 1.098e-06;
+    _5lv_coll_str[OII][TRANS_2_to_3][6] = 8.364e-08;
+    _5lv_coll_str[OII][TRANS_2_to_4][0] = 1.038e-02;
+    _5lv_coll_str[OII][TRANS_2_to_4][1] = -3.425e-05;
+    _5lv_coll_str[OII][TRANS_2_to_4][2] = 2.996e-01;
+    _5lv_coll_str[OII][TRANS_2_to_4][3] = 4.003e-06;
+    _5lv_coll_str[OII][TRANS_2_to_4][4] = -2.143e-04;
+    _5lv_coll_str[OII][TRANS_2_to_4][5] = 3.819e-06;
+    _5lv_coll_str[OII][TRANS_2_to_4][6] = 2.881e-07;
+    _5lv_coll_str[OII][TRANS_3_to_4][0] = 6.465e-02;
+    _5lv_coll_str[OII][TRANS_3_to_4][1] = -3.643e-05;
+    _5lv_coll_str[OII][TRANS_3_to_4][2] = 1.838e-01;
+    _5lv_coll_str[OII][TRANS_3_to_4][3] = 3.856e-06;
+    _5lv_coll_str[OII][TRANS_3_to_4][4] = -1.932e-07;
+    _5lv_coll_str[OII][TRANS_3_to_4][5] = 2.875e-03;
+    _5lv_coll_str[OII][TRANS_3_to_4][6] = 2.147e-04;
+  }
+
+  /// OIII
+  {
+    // data from Galavis, Mendoza & Zeippen (1997), tables 4 and 5
+    // ground state: 3P0
+    // excited states: 3P1, 3P2, 1D2, 1S0
+    // in cm^-1
+    const double energy_levels[4] = {114., 307., 20274., 43186.};
+    _5lv_ginv[OIII][0] = 1.;
+    _5lv_ginv[OIII][1] = 1. / 3.;
+    _5lv_ginv[OIII][2] = 0.2;
+    _5lv_ginv[OIII][3] = 0.2;
+    _5lv_ginv[OIII][4] = 1.;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[OIII][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[OIII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // in s^-1
+    _5lv_A[OIII][TRANS_0_to_1] = 2.664e-5;
+    _5lv_A[OIII][TRANS_0_to_2] = 3.094e-11;
+    _5lv_A[OIII][TRANS_0_to_3] = 1.69e-6;
+    _5lv_A[OIII][TRANS_0_to_4] = 0.;
+    _5lv_A[OIII][TRANS_1_to_2] = 9.695e-5;
+    _5lv_A[OIII][TRANS_1_to_3] = 6.995e-3;
+    _5lv_A[OIII][TRANS_1_to_4] = 2.268e-1;
+    _5lv_A[OIII][TRANS_2_to_3] = 2.041e-2;
+    _5lv_A[OIII][TRANS_2_to_4] = 6.091e-4;
+    _5lv_A[OIII][TRANS_3_to_4] = 1.561;
+    // our own fits to the data of Lennon & Burke (1994)
+    // these fits were made with the script data/linecooling/gamma_OIII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[OIII][TRANS_0_to_1][0] = -2.517e-01;
+    _5lv_coll_str[OIII][TRANS_0_to_1][1] = 2.326e-03;
+    _5lv_coll_str[OIII][TRANS_0_to_1][2] = 2.174e+00;
+    _5lv_coll_str[OIII][TRANS_0_to_1][3] = -2.246e-04;
+    _5lv_coll_str[OIII][TRANS_0_to_1][4] = -4.349e-03;
+    _5lv_coll_str[OIII][TRANS_0_to_1][5] = -5.803e-06;
+    _5lv_coll_str[OIII][TRANS_0_to_1][6] = -4.351e-07;
+    _5lv_coll_str[OIII][TRANS_0_to_2][0] = -2.886e-01;
+    _5lv_coll_str[OIII][TRANS_0_to_2][1] = 1.462e-03;
+    _5lv_coll_str[OIII][TRANS_0_to_2][2] = 1.373e+00;
+    _5lv_coll_str[OIII][TRANS_0_to_2][3] = -1.364e-04;
+    _5lv_coll_str[OIII][TRANS_0_to_2][4] = 6.062e-03;
+    _5lv_coll_str[OIII][TRANS_0_to_2][5] = 2.338e-06;
+    _5lv_coll_str[OIII][TRANS_0_to_2][6] = 1.764e-07;
+    _5lv_coll_str[OIII][TRANS_0_to_3][0] = -7.878e-01;
+    _5lv_coll_str[OIII][TRANS_0_to_3][1] = -3.075e-02;
+    _5lv_coll_str[OIII][TRANS_0_to_3][2] = 5.015e+01;
+    _5lv_coll_str[OIII][TRANS_0_to_3][3] = 7.448e-03;
+    _5lv_coll_str[OIII][TRANS_0_to_3][4] = -3.189e-03;
+    _5lv_coll_str[OIII][TRANS_0_to_3][5] = 6.917e-04;
+    _5lv_coll_str[OIII][TRANS_0_to_3][6] = 5.198e-05;
+    _5lv_coll_str[OIII][TRANS_0_to_4][0] = -5.259e-01;
+    _5lv_coll_str[OIII][TRANS_0_to_4][1] = 1.618e-04;
+    _5lv_coll_str[OIII][TRANS_0_to_4][2] = 1.045e+00;
+    _5lv_coll_str[OIII][TRANS_0_to_4][3] = 2.345e-05;
+    _5lv_coll_str[OIII][TRANS_0_to_4][4] = -7.038e-04;
+    _5lv_coll_str[OIII][TRANS_0_to_4][5] = 3.326e-05;
+    _5lv_coll_str[OIII][TRANS_0_to_4][6] = 2.552e-06;
+    _5lv_coll_str[OIII][TRANS_1_to_2][0] = -2.714e-01;
+    _5lv_coll_str[OIII][TRANS_1_to_2][1] = 6.306e-03;
+    _5lv_coll_str[OIII][TRANS_1_to_2][2] = 5.834e+00;
+    _5lv_coll_str[OIII][TRANS_1_to_2][3] = -5.990e-04;
+    _5lv_coll_str[OIII][TRANS_1_to_2][4] = -5.646e-03;
+    _5lv_coll_str[OIII][TRANS_1_to_2][5] = -1.140e-05;
+    _5lv_coll_str[OIII][TRANS_1_to_2][6] = -8.562e-07;
+    _5lv_coll_str[OIII][TRANS_1_to_3][0] = -7.879e-01;
+    _5lv_coll_str[OIII][TRANS_1_to_3][1] = -9.239e-02;
+    _5lv_coll_str[OIII][TRANS_1_to_3][2] = 1.505e+02;
+    _5lv_coll_str[OIII][TRANS_1_to_3][3] = 2.237e-02;
+    _5lv_coll_str[OIII][TRANS_1_to_3][4] = 1.919e-02;
+    _5lv_coll_str[OIII][TRANS_1_to_3][5] = -3.453e-04;
+    _5lv_coll_str[OIII][TRANS_1_to_3][6] = -2.593e-05;
+    _5lv_coll_str[OIII][TRANS_1_to_4][0] = -5.259e-01;
+    _5lv_coll_str[OIII][TRANS_1_to_4][1] = 4.853e-04;
+    _5lv_coll_str[OIII][TRANS_1_to_4][2] = 3.136e+00;
+    _5lv_coll_str[OIII][TRANS_1_to_4][3] = 7.039e-05;
+    _5lv_coll_str[OIII][TRANS_1_to_4][4] = -1.210e-03;
+    _5lv_coll_str[OIII][TRANS_1_to_4][5] = 5.806e-05;
+    _5lv_coll_str[OIII][TRANS_1_to_4][6] = 4.455e-06;
+    _5lv_coll_str[OIII][TRANS_2_to_3][0] = -7.879e-01;
+    _5lv_coll_str[OIII][TRANS_2_to_3][1] = -1.541e-01;
+    _5lv_coll_str[OIII][TRANS_2_to_3][2] = 2.510e+02;
+    _5lv_coll_str[OIII][TRANS_2_to_3][3] = 3.730e-02;
+    _5lv_coll_str[OIII][TRANS_2_to_3][4] = 6.860e-02;
+    _5lv_coll_str[OIII][TRANS_2_to_3][5] = -1.610e-04;
+    _5lv_coll_str[OIII][TRANS_2_to_3][6] = -1.209e-05;
+    _5lv_coll_str[OIII][TRANS_2_to_4][0] = -5.260e-01;
+    _5lv_coll_str[OIII][TRANS_2_to_4][1] = 8.087e-04;
+    _5lv_coll_str[OIII][TRANS_2_to_4][2] = 5.229e+00;
+    _5lv_coll_str[OIII][TRANS_2_to_4][3] = 1.175e-04;
+    _5lv_coll_str[OIII][TRANS_2_to_4][4] = -1.729e-03;
+    _5lv_coll_str[OIII][TRANS_2_to_4][5] = 6.777e-05;
+    _5lv_coll_str[OIII][TRANS_2_to_4][6] = 5.200e-06;
+    _5lv_coll_str[OIII][TRANS_3_to_4][0] = 6.242e-02;
+    _5lv_coll_str[OIII][TRANS_3_to_4][1] = 1.702e-04;
+    _5lv_coll_str[OIII][TRANS_3_to_4][2] = 1.766e-01;
+    _5lv_coll_str[OIII][TRANS_3_to_4][3] = -1.776e-05;
+    _5lv_coll_str[OIII][TRANS_3_to_4][4] = -2.314e-03;
+    _5lv_coll_str[OIII][TRANS_3_to_4][5] = -1.121e-06;
+    _5lv_coll_str[OIII][TRANS_3_to_4][6] = -8.415e-08;
+  }
+
+  /// NeIII
+  {
+    // data from Galavis, Mendoza & Zeippen (1997), tables 6 and 7
+    // ground state: 3P2
+    // excited states: 3P1, 3P0, 1D2, 1S0
+    // in cm^-1
+    const double energy_levels[4] = {643., 921., 25841., 55751.};
+    _5lv_ginv[NeIII][0] = 0.2;
+    _5lv_ginv[NeIII][1] = 1. / 3.;
+    _5lv_ginv[NeIII][2] = 1.;
+    _5lv_ginv[NeIII][3] = 0.2;
+    _5lv_ginv[NeIII][4] = 1.;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[NeIII][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[NeIII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // in s^-1
+    _5lv_A[NeIII][TRANS_0_to_1] = 5.974e-3;
+    _5lv_A[NeIII][TRANS_0_to_2] = 2.081e-8;
+    _5lv_A[NeIII][TRANS_0_to_3] = 0.173;
+    _5lv_A[NeIII][TRANS_0_to_4] = 3.985e-3;
+    _5lv_A[NeIII][TRANS_1_to_2] = 1.159e-3;
+    _5lv_A[NeIII][TRANS_1_to_3] = 5.344e-2;
+    _5lv_A[NeIII][TRANS_1_to_4] = 2.028;
+    _5lv_A[NeIII][TRANS_2_to_3] = 8.269e-6;
+    _5lv_A[NeIII][TRANS_2_to_4] = 0.;
+    _5lv_A[NeIII][TRANS_3_to_4] = 2.563;
+    // our own fits to the data of Butler & Zeippen (1994)
+    // these fits were made with the script data/linecooling/gamma_NeIII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[NeIII][TRANS_0_to_1][0] = -6.515e-01;
+    _5lv_coll_str[NeIII][TRANS_0_to_1][1] = 1.958e-01;
+    _5lv_coll_str[NeIII][TRANS_0_to_1][2] = -3.645e+01;
+    _5lv_coll_str[NeIII][TRANS_0_to_1][3] = -1.812e-02;
+    _5lv_coll_str[NeIII][TRANS_0_to_1][4] = -1.815e-03;
+    _5lv_coll_str[NeIII][TRANS_0_to_1][5] = -1.043e-03;
+    _5lv_coll_str[NeIII][TRANS_0_to_1][6] = -7.735e-05;
+    _5lv_coll_str[NeIII][TRANS_0_to_2][0] = -7.577e-01;
+    _5lv_coll_str[NeIII][TRANS_0_to_2][1] = 1.184e-01;
+    _5lv_coll_str[NeIII][TRANS_0_to_2][2] = -2.862e+01;
+    _5lv_coll_str[NeIII][TRANS_0_to_2][3] = -1.047e-02;
+    _5lv_coll_str[NeIII][TRANS_0_to_2][4] = -9.100e-04;
+    _5lv_coll_str[NeIII][TRANS_0_to_2][5] = -1.094e-03;
+    _5lv_coll_str[NeIII][TRANS_0_to_2][6] = -8.029e-05;
+    _5lv_coll_str[NeIII][TRANS_0_to_3][0] = -5.448e-03;
+    _5lv_coll_str[NeIII][TRANS_0_to_3][1] = -9.752e-06;
+    _5lv_coll_str[NeIII][TRANS_0_to_3][2] = 8.134e-01;
+    _5lv_coll_str[NeIII][TRANS_0_to_3][3] = 7.937e-07;
+    _5lv_coll_str[NeIII][TRANS_0_to_3][4] = 4.823e-06;
+    _5lv_coll_str[NeIII][TRANS_0_to_3][5] = 3.627e-05;
+    _5lv_coll_str[NeIII][TRANS_0_to_3][6] = 3.005e-06;
+    _5lv_coll_str[NeIII][TRANS_0_to_4][0] = 1.019e-01;
+    _5lv_coll_str[NeIII][TRANS_0_to_4][1] = -8.068e-06;
+    _5lv_coll_str[NeIII][TRANS_0_to_4][2] = 4.190e-02;
+    _5lv_coll_str[NeIII][TRANS_0_to_4][3] = 8.074e-07;
+    _5lv_coll_str[NeIII][TRANS_0_to_4][4] = 1.758e-08;
+    _5lv_coll_str[NeIII][TRANS_0_to_4][5] = -5.000e-03;
+    _5lv_coll_str[NeIII][TRANS_0_to_4][6] = -3.672e-04;
+    _5lv_coll_str[NeIII][TRANS_1_to_2][0] = -6.173e-01;
+    _5lv_coll_str[NeIII][TRANS_1_to_2][1] = 4.546e-02;
+    _5lv_coll_str[NeIII][TRANS_1_to_2][2] = -8.088e+00;
+    _5lv_coll_str[NeIII][TRANS_1_to_2][3] = -4.215e-03;
+    _5lv_coll_str[NeIII][TRANS_1_to_2][4] = -2.781e-04;
+    _5lv_coll_str[NeIII][TRANS_1_to_2][5] = -1.537e-03;
+    _5lv_coll_str[NeIII][TRANS_1_to_2][6] = -1.139e-04;
+    _5lv_coll_str[NeIII][TRANS_1_to_3][0] = -1.932e-03;
+    _5lv_coll_str[NeIII][TRANS_1_to_3][1] = -8.154e-06;
+    _5lv_coll_str[NeIII][TRANS_1_to_3][2] = 4.758e-01;
+    _5lv_coll_str[NeIII][TRANS_1_to_3][3] = 7.006e-07;
+    _5lv_coll_str[NeIII][TRANS_1_to_3][4] = -9.413e-05;
+    _5lv_coll_str[NeIII][TRANS_1_to_3][5] = -8.679e-07;
+    _5lv_coll_str[NeIII][TRANS_1_to_3][6] = -7.422e-08;
+    _5lv_coll_str[NeIII][TRANS_1_to_4][0] = 1.161e-01;
+    _5lv_coll_str[NeIII][TRANS_1_to_4][1] = -5.770e-06;
+    _5lv_coll_str[NeIII][TRANS_1_to_4][2] = 2.333e-02;
+    _5lv_coll_str[NeIII][TRANS_1_to_4][3] = 5.826e-07;
+    _5lv_coll_str[NeIII][TRANS_1_to_4][4] = -6.898e-04;
+    _5lv_coll_str[NeIII][TRANS_1_to_4][5] = 1.004e-07;
+    _5lv_coll_str[NeIII][TRANS_1_to_4][6] = 7.445e-09;
+    _5lv_coll_str[NeIII][TRANS_2_to_3][0] = -2.118e-02;
+    _5lv_coll_str[NeIII][TRANS_2_to_3][1] = 7.071e-06;
+    _5lv_coll_str[NeIII][TRANS_2_to_3][2] = 1.788e-01;
+    _5lv_coll_str[NeIII][TRANS_2_to_3][3] = -7.768e-07;
+    _5lv_coll_str[NeIII][TRANS_2_to_3][4] = 1.263e-07;
+    _5lv_coll_str[NeIII][TRANS_2_to_3][5] = 1.534e-03;
+    _5lv_coll_str[NeIII][TRANS_2_to_3][6] = 1.191e-04;
+    _5lv_coll_str[NeIII][TRANS_2_to_4][0] = 9.843e-02;
+    _5lv_coll_str[NeIII][TRANS_2_to_4][1] = -1.648e-06;
+    _5lv_coll_str[NeIII][TRANS_2_to_4][2] = 8.827e-03;
+    _5lv_coll_str[NeIII][TRANS_2_to_4][3] = 1.628e-07;
+    _5lv_coll_str[NeIII][TRANS_2_to_4][4] = 1.792e-08;
+    _5lv_coll_str[NeIII][TRANS_2_to_4][5] = -8.454e-04;
+    _5lv_coll_str[NeIII][TRANS_2_to_4][6] = -6.126e-05;
+    _5lv_coll_str[NeIII][TRANS_3_to_4][0] = 5.812e-02;
+    _5lv_coll_str[NeIII][TRANS_3_to_4][1] = -4.021e-05;
+    _5lv_coll_str[NeIII][TRANS_3_to_4][2] = 1.876e-01;
+    _5lv_coll_str[NeIII][TRANS_3_to_4][3] = 4.268e-06;
+    _5lv_coll_str[NeIII][TRANS_3_to_4][4] = 3.941e-03;
+    _5lv_coll_str[NeIII][TRANS_3_to_4][5] = -1.725e-07;
+    _5lv_coll_str[NeIII][TRANS_3_to_4][6] = -1.298e-08;
+  }
+
+  /// SII
+  {
+    // data from Tayal & Zatsarinny (2010), tables 1 and 3
+    // ground state: 4S3/2
+    // excited states: 2D3/2, 2D5/2, 2P1/2, 2P3/2
+    // in eV
+    const double energy_levels[4] = {1.842, 1.845, 3.041, 3.046};
+    _5lv_ginv[SII][0] = 0.25;
+    _5lv_ginv[SII][1] = 0.25;
+    _5lv_ginv[SII][2] = 1. / 6.;
+    _5lv_ginv[SII][3] = 0.5;
+    _5lv_ginv[SII][4] = 0.25;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[SII][TRANS_0_to_1] =
+        energy_levels[0] * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_0_to_2] =
+        energy_levels[1] * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_0_to_3] =
+        energy_levels[2] * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_0_to_4] =
+        energy_levels[3] * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * eV_over_k;
+    _5lv_energy_diff[SII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * eV_over_k;
+    // we take the sum of all contributions (in s^-1)
+    _5lv_A[SII][TRANS_0_to_1] = 6.32e-4;
+    _5lv_A[SII][TRANS_0_to_2] = 2.20e-4;
+    _5lv_A[SII][TRANS_0_to_3] = 7.64e-2;
+    _5lv_A[SII][TRANS_0_to_4] = 1.90e-1;
+    _5lv_A[SII][TRANS_1_to_2] = 1.71e-7;
+    _5lv_A[SII][TRANS_1_to_3] = 1.47e-1;
+    _5lv_A[SII][TRANS_1_to_4] = 1.165e-1;
+    _5lv_A[SII][TRANS_2_to_3] = 7.16e-2;
+    _5lv_A[SII][TRANS_2_to_4] = 1.61e-1;
+    _5lv_A[SII][TRANS_3_to_4] = 2.43e-7;
+    // our own fits to the data of Tayal & Zatsarinny (2010)
+    // these fits were made with the script data/linecooling/gamma_SII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[SII][TRANS_0_to_1][0] = -2.378e-02;
+    _5lv_coll_str[SII][TRANS_0_to_1][1] = -3.780e-05;
+    _5lv_coll_str[SII][TRANS_0_to_1][2] = 3.350e+00;
+    _5lv_coll_str[SII][TRANS_0_to_1][3] = 2.326e-06;
+    _5lv_coll_str[SII][TRANS_0_to_1][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_1][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_1][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_2][0] = -2.591e-02;
+    _5lv_coll_str[SII][TRANS_0_to_2][1] = -5.072e-05;
+    _5lv_coll_str[SII][TRANS_0_to_2][2] = 5.088e+00;
+    _5lv_coll_str[SII][TRANS_0_to_2][3] = 3.003e-06;
+    _5lv_coll_str[SII][TRANS_0_to_2][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_2][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_2][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_3][0] = -4.744e-01;
+    _5lv_coll_str[SII][TRANS_0_to_3][1] = 1.594e-02;
+    _5lv_coll_str[SII][TRANS_0_to_3][2] = 1.361e+01;
+    _5lv_coll_str[SII][TRANS_0_to_3][3] = -1.274e-03;
+    _5lv_coll_str[SII][TRANS_0_to_3][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_3][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_3][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_4][0] = -4.730e-01;
+    _5lv_coll_str[SII][TRANS_0_to_4][1] = 3.177e-02;
+    _5lv_coll_str[SII][TRANS_0_to_4][2] = 2.699e+01;
+    _5lv_coll_str[SII][TRANS_0_to_4][3] = -2.544e-03;
+    _5lv_coll_str[SII][TRANS_0_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_0_to_4][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_2][0] = -8.272e-02;
+    _5lv_coll_str[SII][TRANS_1_to_2][1] = 3.140e-05;
+    _5lv_coll_str[SII][TRANS_1_to_2][2] = 1.492e+01;
+    _5lv_coll_str[SII][TRANS_1_to_2][3] = -5.602e-06;
+    _5lv_coll_str[SII][TRANS_1_to_2][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_2][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_2][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_3][0] = -5.368e-02;
+    _5lv_coll_str[SII][TRANS_1_to_3][1] = 8.155e-05;
+    _5lv_coll_str[SII][TRANS_1_to_3][2] = 2.216e+00;
+    _5lv_coll_str[SII][TRANS_1_to_3][3] = -6.673e-06;
+    _5lv_coll_str[SII][TRANS_1_to_3][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_3][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_3][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_4][0] = -2.183e-02;
+    _5lv_coll_str[SII][TRANS_1_to_4][1] = 5.571e-05;
+    _5lv_coll_str[SII][TRANS_1_to_4][2] = 2.822e+00;
+    _5lv_coll_str[SII][TRANS_1_to_4][3] = -4.915e-06;
+    _5lv_coll_str[SII][TRANS_1_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_1_to_4][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_2_to_3][0] = -1.569e-02;
+    _5lv_coll_str[SII][TRANS_2_to_3][1] = 2.911e-05;
+    _5lv_coll_str[SII][TRANS_2_to_3][2] = 2.012e+00;
+    _5lv_coll_str[SII][TRANS_2_to_3][3] = -2.687e-06;
+    _5lv_coll_str[SII][TRANS_2_to_3][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_2_to_3][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_2_to_3][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_2_to_4][0] = -3.268e-02;
+    _5lv_coll_str[SII][TRANS_2_to_4][1] = 1.339e-04;
+    _5lv_coll_str[SII][TRANS_2_to_4][2] = 5.190e+00;
+    _5lv_coll_str[SII][TRANS_2_to_4][3] = -1.130e-05;
+    _5lv_coll_str[SII][TRANS_2_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_2_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_2_to_4][6] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_3_to_4][0] = -5.249e-01;
+    _5lv_coll_str[SII][TRANS_3_to_4][1] = 6.595e-02;
+    _5lv_coll_str[SII][TRANS_3_to_4][2] = 4.606e+01;
+    _5lv_coll_str[SII][TRANS_3_to_4][3] = -5.206e-03;
+    _5lv_coll_str[SII][TRANS_3_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_3_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SII][TRANS_3_to_4][6] = 0.000e+00;
+  }
+
+  /// SIII
+  {
+    // data from Mendoza & Zeippen (1982), table 2 and 3
+    // ground state: 3P0
+    // excited states: 3P1, 3P2, 1D2, 1S0
+    // in Ry
+    const double energy_levels[4] = {0.002708, 0.007586, 0.103157, 0.247532};
+    _5lv_ginv[SIII][0] = 1.;
+    _5lv_ginv[SIII][1] = 1. / 3.;
+    _5lv_ginv[SIII][2] = 0.2;
+    _5lv_ginv[SIII][3] = 0.2;
+    _5lv_ginv[SIII][4] = 1.;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[SIII][TRANS_0_to_1] =
+        energy_levels[0] * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_0_to_2] =
+        energy_levels[1] * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_0_to_3] =
+        energy_levels[2] * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_0_to_4] =
+        energy_levels[3] * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * Ry_over_k;
+    _5lv_energy_diff[SIII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * Ry_over_k;
+    // we take the sum of all contributions (in s^-1)
+    _5lv_A[SIII][TRANS_0_to_1] = 4.72e-4;
+    _5lv_A[SIII][TRANS_0_to_2] = 4.61e-8;
+    _5lv_A[SIII][TRANS_0_to_3] = 5.82e-6;
+    _5lv_A[SIII][TRANS_0_to_4] = 0.;
+    _5lv_A[SIII][TRANS_1_to_2] = 2.07e-3;
+    _5lv_A[SIII][TRANS_1_to_3] = 2.20e-2;
+    _5lv_A[SIII][TRANS_1_to_4] = 7.96e-1;
+    _5lv_A[SIII][TRANS_2_to_3] = 5.76e-2;
+    _5lv_A[SIII][TRANS_2_to_4] = 1.05e-2;
+    _5lv_A[SIII][TRANS_3_to_4] = 2.22;
+    // our own fits to the data of Hudson, Ramsbottom & Scott (2012)
+    // these fits were made with the script data/linecooling/gamma_SIII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[SIII][TRANS_0_to_1][0] = 8.018e-02;
+    _5lv_coll_str[SIII][TRANS_0_to_1][1] = -4.930e-05;
+    _5lv_coll_str[SIII][TRANS_0_to_1][2] = 1.206e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_1][3] = 3.800e-06;
+    _5lv_coll_str[SIII][TRANS_0_to_1][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_1][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_1][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_2][0] = -2.250e-01;
+    _5lv_coll_str[SIII][TRANS_0_to_2][1] = 1.746e-03;
+    _5lv_coll_str[SIII][TRANS_0_to_2][2] = 3.814e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_2][3] = -1.408e-04;
+    _5lv_coll_str[SIII][TRANS_0_to_2][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_2][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_2][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_3][0] = -3.470e-02;
+    _5lv_coll_str[SIII][TRANS_0_to_3][1] = 6.561e-05;
+    _5lv_coll_str[SIII][TRANS_0_to_3][2] = 8.851e-01;
+    _5lv_coll_str[SIII][TRANS_0_to_3][3] = -5.617e-06;
+    _5lv_coll_str[SIII][TRANS_0_to_3][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_3][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_3][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_4][0] = 1.134e-01;
+    _5lv_coll_str[SIII][TRANS_0_to_4][1] = 3.383e-06;
+    _5lv_coll_str[SIII][TRANS_0_to_4][2] = 3.649e-02;
+    _5lv_coll_str[SIII][TRANS_0_to_4][3] = -2.851e-07;
+    _5lv_coll_str[SIII][TRANS_0_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_0_to_4][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_2][0] = -4.587e-03;
+    _5lv_coll_str[SIII][TRANS_1_to_2][1] = 2.257e-04;
+    _5lv_coll_str[SIII][TRANS_1_to_2][2] = 4.846e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_2][3] = -1.949e-05;
+    _5lv_coll_str[SIII][TRANS_1_to_2][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_2][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_2][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_3][0] = -4.454e-02;
+    _5lv_coll_str[SIII][TRANS_1_to_3][1] = 2.365e-04;
+    _5lv_coll_str[SIII][TRANS_1_to_3][2] = 2.823e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_3][3] = -2.014e-05;
+    _5lv_coll_str[SIII][TRANS_1_to_3][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_3][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_3][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_4][0] = 1.665e-01;
+    _5lv_coll_str[SIII][TRANS_1_to_4][1] = 2.041e-06;
+    _5lv_coll_str[SIII][TRANS_1_to_4][2] = 6.825e-02;
+    _5lv_coll_str[SIII][TRANS_1_to_4][3] = -1.900e-07;
+    _5lv_coll_str[SIII][TRANS_1_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_1_to_4][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_2_to_3][0] = -3.303e-02;
+    _5lv_coll_str[SIII][TRANS_2_to_3][1] = 3.185e-04;
+    _5lv_coll_str[SIII][TRANS_2_to_3][2] = 4.890e+00;
+    _5lv_coll_str[SIII][TRANS_2_to_3][3] = -2.742e-05;
+    _5lv_coll_str[SIII][TRANS_2_to_3][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_2_to_3][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_2_to_3][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_2_to_4][0] = 1.765e-01;
+    _5lv_coll_str[SIII][TRANS_2_to_4][1] = 2.565e-06;
+    _5lv_coll_str[SIII][TRANS_2_to_4][2] = 1.041e-01;
+    _5lv_coll_str[SIII][TRANS_2_to_4][3] = -2.451e-07;
+    _5lv_coll_str[SIII][TRANS_2_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_2_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_2_to_4][6] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_3_to_4][0] = -2.273e-01;
+    _5lv_coll_str[SIII][TRANS_3_to_4][1] = 3.338e-03;
+    _5lv_coll_str[SIII][TRANS_3_to_4][2] = 2.390e+00;
+    _5lv_coll_str[SIII][TRANS_3_to_4][3] = -2.696e-04;
+    _5lv_coll_str[SIII][TRANS_3_to_4][4] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_3_to_4][5] = 0.000e+00;
+    _5lv_coll_str[SIII][TRANS_3_to_4][6] = 0.000e+00;
+  }
+
+  /// CII
+  {
+    // data from Froese Fischer & Tachiev (2004), table 2
+    // ground state: 2P1/2
+    // excited states: 2P3/2, 4P1/2, 4P3/2, 4P5/2
+    // in cm^-1
+    const double energy_levels[4] = {63.67, 43057.99, 43080.21, 43108.66};
+    _5lv_ginv[CII][0] = 0.5;
+    _5lv_ginv[CII][1] = 0.25;
+    _5lv_ginv[CII][2] = 0.5;
+    _5lv_ginv[CII][3] = 0.25;
+    _5lv_ginv[CII][4] = 1. / 6.;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[CII][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[CII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // we sum contributions of all types (in s^-1)
+    _5lv_A[CII][TRANS_0_to_1] = 2.321e-6;
+    _5lv_A[CII][TRANS_0_to_2] = 6.136e1;
+    _5lv_A[CII][TRANS_0_to_3] = 1.463;
+    _5lv_A[CII][TRANS_0_to_4] = 8.177e-4;
+    _5lv_A[CII][TRANS_1_to_2] = 6.929e1;
+    _5lv_A[CII][TRANS_1_to_3] = 8.853;
+    _5lv_A[CII][TRANS_1_to_4] = 4.477e1;
+    _5lv_A[CII][TRANS_2_to_3] = 2.467e-7;
+    _5lv_A[CII][TRANS_2_to_4] = 3.571e-14;
+    _5lv_A[CII][TRANS_3_to_4] = 3.725e-7;
+    // our own fits to the data of Tayal (2008)
+    // these fits were made with the script data/linecooling/gamma_CII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[CII][TRANS_0_to_1][0] = -9.519e-01;
+    _5lv_coll_str[CII][TRANS_0_to_1][1] = -5.097e+00;
+    _5lv_coll_str[CII][TRANS_0_to_1][2] = 1.436e+03;
+    _5lv_coll_str[CII][TRANS_0_to_1][3] = 7.424e-01;
+    _5lv_coll_str[CII][TRANS_0_to_1][4] = -5.391e+01;
+    _5lv_coll_str[CII][TRANS_0_to_1][5] = 3.673e-06;
+    _5lv_coll_str[CII][TRANS_0_to_1][6] = 2.806e-07;
+    _5lv_coll_str[CII][TRANS_0_to_2][0] = 1.247e-01;
+    _5lv_coll_str[CII][TRANS_0_to_2][1] = -2.710e-05;
+    _5lv_coll_str[CII][TRANS_0_to_2][2] = 1.110e-01;
+    _5lv_coll_str[CII][TRANS_0_to_2][3] = 2.784e-06;
+    _5lv_coll_str[CII][TRANS_0_to_2][4] = 1.410e-02;
+    _5lv_coll_str[CII][TRANS_0_to_2][5] = -3.198e-08;
+    _5lv_coll_str[CII][TRANS_0_to_2][6] = -2.437e-09;
+    _5lv_coll_str[CII][TRANS_0_to_3][0] = 3.496e-07;
+    _5lv_coll_str[CII][TRANS_0_to_3][1] = -2.076e-05;
+    _5lv_coll_str[CII][TRANS_0_to_3][2] = 3.990e-01;
+    _5lv_coll_str[CII][TRANS_0_to_3][3] = 2.426e-06;
+    _5lv_coll_str[CII][TRANS_0_to_3][4] = -2.832e+00;
+    _5lv_coll_str[CII][TRANS_0_to_3][5] = 2.765e-10;
+    _5lv_coll_str[CII][TRANS_0_to_3][6] = 2.159e-11;
+    _5lv_coll_str[CII][TRANS_0_to_4][0] = -2.814e-06;
+    _5lv_coll_str[CII][TRANS_0_to_4][1] = -2.407e-05;
+    _5lv_coll_str[CII][TRANS_0_to_4][2] = 2.474e-01;
+    _5lv_coll_str[CII][TRANS_0_to_4][3] = 2.906e-06;
+    _5lv_coll_str[CII][TRANS_0_to_4][4] = 1.393e+00;
+    _5lv_coll_str[CII][TRANS_0_to_4][5] = -6.962e-10;
+    _5lv_coll_str[CII][TRANS_0_to_4][6] = -5.438e-11;
+    _5lv_coll_str[CII][TRANS_1_to_2][0] = 1.949e-01;
+    _5lv_coll_str[CII][TRANS_1_to_2][1] = -9.811e-06;
+    _5lv_coll_str[CII][TRANS_1_to_2][2] = 4.074e-02;
+    _5lv_coll_str[CII][TRANS_1_to_2][3] = 1.003e-06;
+    _5lv_coll_str[CII][TRANS_1_to_2][4] = 7.165e-03;
+    _5lv_coll_str[CII][TRANS_1_to_2][5] = -2.276e-08;
+    _5lv_coll_str[CII][TRANS_1_to_2][6] = -1.738e-09;
+    _5lv_coll_str[CII][TRANS_1_to_3][0] = 1.449e-01;
+    _5lv_coll_str[CII][TRANS_1_to_3][1] = -3.673e-05;
+    _5lv_coll_str[CII][TRANS_1_to_3][2] = 1.713e-01;
+    _5lv_coll_str[CII][TRANS_1_to_3][3] = 3.763e-06;
+    _5lv_coll_str[CII][TRANS_1_to_3][4] = -9.812e-03;
+    _5lv_coll_str[CII][TRANS_1_to_3][5] = 6.304e-08;
+    _5lv_coll_str[CII][TRANS_1_to_3][6] = 4.812e-09;
+    _5lv_coll_str[CII][TRANS_1_to_4][0] = -2.743e-06;
+    _5lv_coll_str[CII][TRANS_1_to_4][1] = -1.291e-04;
+    _5lv_coll_str[CII][TRANS_1_to_4][2] = 1.183e+00;
+    _5lv_coll_str[CII][TRANS_1_to_4][3] = 1.437e-05;
+    _5lv_coll_str[CII][TRANS_1_to_4][4] = 1.598e+00;
+    _5lv_coll_str[CII][TRANS_1_to_4][5] = -2.263e-09;
+    _5lv_coll_str[CII][TRANS_1_to_4][6] = -1.753e-10;
+    _5lv_coll_str[CII][TRANS_2_to_3][0] = -1.195e-03;
+    _5lv_coll_str[CII][TRANS_2_to_3][1] = -2.027e-04;
+    _5lv_coll_str[CII][TRANS_2_to_3][2] = 6.479e-01;
+    _5lv_coll_str[CII][TRANS_2_to_3][3] = 2.660e-05;
+    _5lv_coll_str[CII][TRANS_2_to_3][4] = -7.636e-01;
+    _5lv_coll_str[CII][TRANS_2_to_3][5] = 1.257e-08;
+    _5lv_coll_str[CII][TRANS_2_to_3][6] = 9.795e-10;
+    _5lv_coll_str[CII][TRANS_2_to_4][0] = -4.787e-01;
+    _5lv_coll_str[CII][TRANS_2_to_4][1] = -1.490e-03;
+    _5lv_coll_str[CII][TRANS_2_to_4][2] = 1.501e+01;
+    _5lv_coll_str[CII][TRANS_2_to_4][3] = 9.750e-04;
+    _5lv_coll_str[CII][TRANS_2_to_4][4] = 3.103e+00;
+    _5lv_coll_str[CII][TRANS_2_to_4][5] = -2.437e-07;
+    _5lv_coll_str[CII][TRANS_2_to_4][6] = -1.908e-08;
+    _5lv_coll_str[CII][TRANS_3_to_4][0] = -2.430e-03;
+    _5lv_coll_str[CII][TRANS_3_to_4][1] = -3.839e-04;
+    _5lv_coll_str[CII][TRANS_3_to_4][2] = 1.605e+00;
+    _5lv_coll_str[CII][TRANS_3_to_4][3] = 5.173e-05;
+    _5lv_coll_str[CII][TRANS_3_to_4][4] = -2.446e-01;
+    _5lv_coll_str[CII][TRANS_3_to_4][5] = 8.372e-08;
+    _5lv_coll_str[CII][TRANS_3_to_4][6] = 6.553e-09;
+  }
+
+  /// CIII
+  {
+    // data from Froese Fischer & Tachiev (2004), table 1
+    // ground state: 1S0
+    // excited states: 3P0, 3P1, 3P2, 1P1
+    // in cm^-1
+    const double energy_levels[4] = {52391.87, 52415.53, 52472.16, 102446.94};
+    _5lv_ginv[CIII][0] = 1.;
+    _5lv_ginv[CIII][1] = 1.;
+    _5lv_ginv[CIII][2] = 1. / 3.;
+    _5lv_ginv[CIII][3] = 0.2;
+    _5lv_ginv[CIII][4] = 1. / 3.;
+    // convert energy levels to energy differences (and convert units)
+    _5lv_energy_diff[CIII][TRANS_0_to_1] =
+        energy_levels[0] * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_0_to_2] =
+        energy_levels[1] * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_0_to_3] =
+        energy_levels[2] * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_0_to_4] =
+        energy_levels[3] * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_1_to_2] =
+        (energy_levels[1] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_1_to_3] =
+        (energy_levels[2] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_1_to_4] =
+        (energy_levels[3] - energy_levels[0]) * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_2_to_3] =
+        (energy_levels[2] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_2_to_4] =
+        (energy_levels[3] - energy_levels[1]) * hc_over_k;
+    _5lv_energy_diff[CIII][TRANS_3_to_4] =
+        (energy_levels[3] - energy_levels[2]) * hc_over_k;
+    // we sum contributions of all types (in s^-1)
+    _5lv_A[CIII][TRANS_0_to_1] = 0.;
+    _5lv_A[CIII][TRANS_0_to_2] = 1.040e2;
+    _5lv_A[CIII][TRANS_0_to_3] = 5.216e-3;
+    _5lv_A[CIII][TRANS_0_to_4] = 1.769e9;
+    _5lv_A[CIII][TRANS_1_to_2] = 2.381e-7;
+    _5lv_A[CIII][TRANS_1_to_3] = 1.486e-13;
+    _5lv_A[CIII][TRANS_1_to_4] = 1.595e-3;
+    _5lv_A[CIII][TRANS_2_to_3] = 2.450e-6;
+    _5lv_A[CIII][TRANS_2_to_4] = 1.269e-3;
+    _5lv_A[CIII][TRANS_3_to_4] = 2.036e-3;
+    // our own fits to the data of Berrington et al. (1985)
+    // these fits were made with the script data/linecooling/gamma_CIII.py
+    // (this script also outputs the code below)
+    _5lv_coll_str[CIII][TRANS_0_to_1][0] = 1.265e-07;
+    _5lv_coll_str[CIII][TRANS_0_to_1][1] = 5.762e-06;
+    _5lv_coll_str[CIII][TRANS_0_to_1][2] = 1.080e-01;
+    _5lv_coll_str[CIII][TRANS_0_to_1][3] = -5.626e-07;
+    _5lv_coll_str[CIII][TRANS_0_to_1][4] = 1.412e+00;
+    _5lv_coll_str[CIII][TRANS_0_to_1][5] = 1.950e-11;
+    _5lv_coll_str[CIII][TRANS_0_to_1][6] = 1.323e-12;
+    _5lv_coll_str[CIII][TRANS_0_to_2][0] = 3.793e-07;
+    _5lv_coll_str[CIII][TRANS_0_to_2][1] = 1.727e-05;
+    _5lv_coll_str[CIII][TRANS_0_to_2][2] = 3.239e-01;
+    _5lv_coll_str[CIII][TRANS_0_to_2][3] = -1.686e-06;
+    _5lv_coll_str[CIII][TRANS_0_to_2][4] = 1.095e+00;
+    _5lv_coll_str[CIII][TRANS_0_to_2][5] = 7.533e-11;
+    _5lv_coll_str[CIII][TRANS_0_to_2][6] = 5.111e-12;
+    _5lv_coll_str[CIII][TRANS_0_to_3][0] = 3.942e-07;
+    _5lv_coll_str[CIII][TRANS_0_to_3][1] = 2.877e-05;
+    _5lv_coll_str[CIII][TRANS_0_to_3][2] = 5.399e-01;
+    _5lv_coll_str[CIII][TRANS_0_to_3][3] = -2.809e-06;
+    _5lv_coll_str[CIII][TRANS_0_to_3][4] = 6.095e-01;
+    _5lv_coll_str[CIII][TRANS_0_to_3][5] = 2.255e-10;
+    _5lv_coll_str[CIII][TRANS_0_to_3][6] = 1.530e-11;
+    _5lv_coll_str[CIII][TRANS_0_to_4][0] = 8.424e-06;
+    _5lv_coll_str[CIII][TRANS_0_to_4][1] = 7.004e-05;
+    _5lv_coll_str[CIII][TRANS_0_to_4][2] = 3.767e+00;
+    _5lv_coll_str[CIII][TRANS_0_to_4][3] = -5.480e-06;
+    _5lv_coll_str[CIII][TRANS_0_to_4][4] = -4.018e-01;
+    _5lv_coll_str[CIII][TRANS_0_to_4][5] = -4.228e-10;
+    _5lv_coll_str[CIII][TRANS_0_to_4][6] = -2.906e-11;
+    _5lv_coll_str[CIII][TRANS_1_to_2][0] = 5.033e-06;
+    _5lv_coll_str[CIII][TRANS_1_to_2][1] = 1.611e-04;
+    _5lv_coll_str[CIII][TRANS_1_to_2][2] = 6.600e-01;
+    _5lv_coll_str[CIII][TRANS_1_to_2][3] = -1.477e-05;
+    _5lv_coll_str[CIII][TRANS_1_to_2][4] = 3.546e+00;
+    _5lv_coll_str[CIII][TRANS_1_to_2][5] = 1.577e-10;
+    _5lv_coll_str[CIII][TRANS_1_to_2][6] = 1.063e-11;
+    _5lv_coll_str[CIII][TRANS_1_to_3][0] = -6.251e-05;
+    _5lv_coll_str[CIII][TRANS_1_to_3][1] = 3.034e-04;
+    _5lv_coll_str[CIII][TRANS_1_to_3][2] = 1.039e-01;
+    _5lv_coll_str[CIII][TRANS_1_to_3][3] = -2.744e-05;
+    _5lv_coll_str[CIII][TRANS_1_to_3][4] = 2.856e-01;
+    _5lv_coll_str[CIII][TRANS_1_to_3][5] = 3.444e-09;
+    _5lv_coll_str[CIII][TRANS_1_to_3][6] = 2.317e-10;
+    _5lv_coll_str[CIII][TRANS_1_to_4][0] = 1.741e-06;
+    _5lv_coll_str[CIII][TRANS_1_to_4][1] = -1.148e-05;
+    _5lv_coll_str[CIII][TRANS_1_to_4][2] = 4.633e-01;
+    _5lv_coll_str[CIII][TRANS_1_to_4][3] = 7.853e-07;
+    _5lv_coll_str[CIII][TRANS_1_to_4][4] = -4.244e+00;
+    _5lv_coll_str[CIII][TRANS_1_to_4][5] = -5.205e-12;
+    _5lv_coll_str[CIII][TRANS_1_to_4][6] = -3.781e-13;
+    _5lv_coll_str[CIII][TRANS_2_to_3][0] = 1.932e-05;
+    _5lv_coll_str[CIII][TRANS_2_to_3][1] = 8.772e-04;
+    _5lv_coll_str[CIII][TRANS_2_to_3][2] = 1.032e+00;
+    _5lv_coll_str[CIII][TRANS_2_to_3][3] = -7.960e-05;
+    _5lv_coll_str[CIII][TRANS_2_to_3][4] = 3.735e+00;
+    _5lv_coll_str[CIII][TRANS_2_to_3][5] = 7.737e-10;
+    _5lv_coll_str[CIII][TRANS_2_to_3][6] = 5.206e-11;
+    _5lv_coll_str[CIII][TRANS_2_to_4][0] = 3.777e-04;
+    _5lv_coll_str[CIII][TRANS_2_to_4][1] = -3.470e-05;
+    _5lv_coll_str[CIII][TRANS_2_to_4][2] = 1.386e+00;
+    _5lv_coll_str[CIII][TRANS_2_to_4][3] = 2.382e-06;
+    _5lv_coll_str[CIII][TRANS_2_to_4][4] = 4.838e-02;
+    _5lv_coll_str[CIII][TRANS_2_to_4][5] = 1.336e-09;
+    _5lv_coll_str[CIII][TRANS_2_to_4][6] = 9.718e-11;
+    _5lv_coll_str[CIII][TRANS_3_to_4][0] = 7.721e-06;
+    _5lv_coll_str[CIII][TRANS_3_to_4][1] = -5.752e-05;
+    _5lv_coll_str[CIII][TRANS_3_to_4][2] = 2.317e+00;
+    _5lv_coll_str[CIII][TRANS_3_to_4][3] = 3.938e-06;
+    _5lv_coll_str[CIII][TRANS_3_to_4][4] = 5.449e-01;
+    _5lv_coll_str[CIII][TRANS_3_to_4][5] = 2.013e-10;
+    _5lv_coll_str[CIII][TRANS_3_to_4][6] = 1.463e-11;
+  }
+
+  /// two level elements
+  // note that we need to remap the indices of these levels, as the enum values
+  // start counting from LINECOOL_5LV_NELEM
+  // this is better than needing to do the remapping outside of the class, which
+  // is what would happen otherwise...
+
+  /// NIII
+  {
+    // Blum & Pradhan (1992), table 5, first energy level (in Ry)
+    // ground state: 2P1/2
+    // excited state: 2P3/2
+    _2lv_energy_diff[NIII - LINECOOL_5LV_NELEM] = 0.00159 * Ry_over_k;
+    // Galavis, Mendoza & Zeippen (1998), table 4, 1 to 2 transition (in s^-1)
+    _2lv_A[NIII - LINECOOL_5LV_NELEM] = 4.736e-5;
+    // our own fits to the data of Blum & Pradhan (1992), table 3
+    // these fits were made with the script data/linecooling/gamma_NIII.py
+    // (this script also outputs the code below)
+    _2lv_coll_str[NIII - LINECOOL_5LV_NELEM][0] = -3.257e-02;
+    _2lv_coll_str[NIII - LINECOOL_5LV_NELEM][1] = -3.573e-04;
+    _2lv_coll_str[NIII - LINECOOL_5LV_NELEM][2] = 1.653e+00;
+    _2lv_coll_str[NIII - LINECOOL_5LV_NELEM][3] = 4.822e-05;
+    _2lv_coll_str[NIII - LINECOOL_5LV_NELEM][4] = -7.529e-06;
+    _2lv_coll_str[NIII - LINECOOL_5LV_NELEM][5] = 3.018e-03;
+    _2lv_coll_str[NIII - LINECOOL_5LV_NELEM][6] = 2.453e-04;
+    // statistical weights: level 0 is a P_{1/2} level, while level 1 is a
+    // P_{3/2}
+    _2lv_ginv[NIII - LINECOOL_5LV_NELEM][0] = 0.5;
+    _2lv_ginv[NIII - LINECOOL_5LV_NELEM][1] = 0.25;
+  }
+
+  /// NeII
+  {
+    // Saraph & Tully (1994), table 2, fine structure splitting energy for
+    // Z = 10 (in Ry)
+    // ground state: 2P3/2
+    // excited state: 2P1/2
+    _2lv_energy_diff[NeII - LINECOOL_5LV_NELEM] = 0.0071 * Ry_over_k;
+    // Kaufman & Sugar (1986), table 7 (in s^-1)
+    _2lv_A[NeII - LINECOOL_5LV_NELEM] = 8.55e-3;
+    // our own fits to the data of Griffin, Mitnik & Badnell (2001), table 4
+    // these fits were made with the script data/linecooling/gamma_NeII.py
+    // (this script also outputs the code below)
+    _2lv_coll_str[NeII - LINECOOL_5LV_NELEM][0] = -8.548e-01;
+    _2lv_coll_str[NeII - LINECOOL_5LV_NELEM][1] = 1.938e-01;
+    _2lv_coll_str[NeII - LINECOOL_5LV_NELEM][2] = -1.038e+01;
+    _2lv_coll_str[NeII - LINECOOL_5LV_NELEM][3] = -1.254e-02;
+    _2lv_coll_str[NeII - LINECOOL_5LV_NELEM][4] = 2.715e-02;
+    _2lv_coll_str[NeII - LINECOOL_5LV_NELEM][5] = 5.755e-05;
+    _2lv_coll_str[NeII - LINECOOL_5LV_NELEM][6] = 4.171e-06;
+    // statistical weights: level 0 is a P_{3/2} level, while level 1 is a
+    // P_{1/2}
+    _2lv_ginv[NeII - LINECOOL_5LV_NELEM][0] = 0.25;
+    _2lv_ginv[NeII - LINECOOL_5LV_NELEM][1] = 0.5;
+  }
+
+  /// SIV
+  {
+    // data from Martin, Zalubas & Musgrove (1990)
+    // ground state: 2P1/2
+    // excited state: 2P3/2
+    // in cm^-1
+    _2lv_energy_diff[SIV - LINECOOL_5LV_NELEM] = 951.43 * hc_over_k;
+    // data from Pradhan (1995), table I
+    _2lv_A[SIV - LINECOOL_5LV_NELEM] = 7.73e-3;
+    // our own fits to the data of Saraph & Storey (1999), table 5
+    // these fits were made with the script data/linecooling/gamma_SIV.py
+    // (this script also outputs the code below)
+    _2lv_coll_str[SIV - LINECOOL_5LV_NELEM][0] = -9.667e-01;
+    _2lv_coll_str[SIV - LINECOOL_5LV_NELEM][1] = -1.721e+01;
+    _2lv_coll_str[SIV - LINECOOL_5LV_NELEM][2] = 2.979e+03;
+    _2lv_coll_str[SIV - LINECOOL_5LV_NELEM][3] = 2.954e+00;
+    _2lv_coll_str[SIV - LINECOOL_5LV_NELEM][4] = -1.593e+01;
+    _2lv_coll_str[SIV - LINECOOL_5LV_NELEM][5] = 9.973e-05;
+    _2lv_coll_str[SIV - LINECOOL_5LV_NELEM][6] = 8.092e-06;
+    // statistical weights: level 0 is a P_{1/2} level, while level 1 is a
+    // P_{3/2}
+    _2lv_ginv[SIV - LINECOOL_5LV_NELEM][0] = 0.5;
+    _2lv_ginv[SIV - LINECOOL_5LV_NELEM][1] = 0.25;
+  }
+
+  /// numerical factors that are precomputed
+
+  // Boltzmann constant (in J s^-1)
+  // const double kb = 1.38064852e-23;
+  // Planck constant (in J s)
+  // const double h = 6.626070040e-34;;
+  // electron mass (in kg)
+  // const double m_e = 9.10938356e-31;
+  // Boltzmann constant (in J s^-1)
+  const double kb = 1.38064852e-16;
+  // Planck constant (in J s)
+  const double h = 6.626070040e-27;
+  // electron mass (in kg)
+  const double m_e = 9.10938356e-28;
+
+  _coll_str_prefactor =
+      h * h / (std::sqrt(kb) * std::pow(2. * M_PI * m_e, 1.5));
+}
+
+// Transition probability for deexcitation (in s^-1).
+double LineCool::get_A(LineCool5LvElem element,
+		       LineCoolTransition transition) const {
+  return _5lv_A[element][transition];
+}
+
+// Get the energy difference (in K) for the given transition of the given
+// element.
+double LineCool::get_energy_diff(LineCool5LvElem element,
+				 LineCoolTransition transition) const {
+  return _5lv_energy_diff[element][transition];
+}
+
+// Get the statistical weight for the given level of the given 5 level element.
+double LineCool::get_statistical_weight(LineCool5LvElem element,
+                                        uint_fast8_t level) const {
+  return 1. / _5lv_ginv[element][level];
+}
+
+/**
+ * @brief Solve a system of 5 coupled linear equations.
+ *
+ * We assume a system of equations of the form
+ * @f[
+ *   A.X = B,
+ * @f]
+ * with
+ * @f[
+ * A = \begin{pmatrix}
+ * A00 & A01 & A02 & A03 & A04 \\
+ * A10 & A11 & A12 & A13 & A14 \\
+ * A20 & A21 & A22 & A23 & A24 \\
+ * A30 & A31 & A32 & A33 & A34 \\
+ * A40 & A41 & A42 & A43 & A44
+ * \end{pmatrix},
+ * @f]
+ * and
+ * @f[
+ * B = \begin{pmatrix}
+ * B0 \\
+ * B1 \\
+ * B2 \\
+ * B3 \\
+ * B4
+ * \end{pmatrix}.
+ * @f]
+ * We want to solve for the elements of the column matrix @f$X@f$.
+ *
+ * To do this, we first reduce the combined matrix @f$AB@f$ (the matrix @f$A@f$
+ * with the matrix @f$B@f$ added as an extra column) to an upper triangular
+ * matrix using Gaussian elimination. This automatically gives us the solution
+ * for the last element of @f$X@f$. We then use this element to recursively
+ * solve for the others by substitution.
+ *
+ * To avoid division by zero, we always use the next row with the largest
+ * coefficient, and interchange rows if necessary. This means that to eliminate
+ * e.g. row 2, we first check which of the rows 2-5 contains the largest value
+ * in column 2. Suppose this is row 4. We then interchange rows 2 and 4, and
+ * divide all columns of the new row 2 (the original row 4) by the value in
+ * column 2 of row 2. Row 2 now contains a 1 at position 2, which is what we
+ * want. We then use the values in row 2 to make sure all elements up to column
+ * 2 are zero in all rows below row 2. Since row 2, column 2 is 1, this can be
+ * achieved by simply subtracting row 2, column i multiplied by row j, column 2
+ * from row j, column i for all i and j larger than 2. We do not actually do the
+ * calculation for column 2 and smaller, since we know the result is zero
+ * (column 1 was already zero after the elimination of row 1).
+ *
+ * Note that both matrix @f$A@f$ and matrix @f$B@f$ are modified in place. When
+ * the method returns, @f$B@f$ contains the elements of the matrix @f$X@f$.
+ *
+ * @param A Elements of the matrix @f$A@f$.
+ * @param B Elements of the matrix @f$B@f$, and elements of the solution on
+ * exit.
+ * @return Exit code: 0 on success. If a non zero value is returned, the values
+ * stored in B on exit are meaningless and should not be used.
+ */
+int LineCool::solve_system_of_linear_equations(double A[5][5],
+                                                      double B[5]) {
+
+  for (uint_fast8_t j = 0; j < 5; ++j) {
+    // find the next row with the largest coefficient
+    uint_fast8_t imax = 0;
+    double Amax = 0.;
+    for (uint_fast8_t i = j; i < 5; ++i) {
+      if (std::abs(A[i][j]) > std::abs(Amax)) {
+        Amax = A[i][j];
+        imax = i;
+      }
+    }
+    // check that the matrix is non-singular
+    if (Amax == 0.) {
+      return 1;
+    }
+    const double Amax_inv = 1. / Amax;
+    // imax now contains the index of the row with the largest coefficient
+    // interchange rows if necessary to make sure that the row with the largest
+    // coefficient is the next row to eliminate with
+    for (uint_fast8_t k = 0; k < 5; ++k) {
+      if (imax != j) {
+        const double save = A[j][k];
+        A[j][k] = A[imax][k];
+        A[imax][k] = save;
+      }
+      A[j][k] *= Amax_inv;
+    }
+    if (imax != j) {
+      const double save = B[j];
+      B[j] = B[imax];
+      B[imax] = save;
+    }
+    B[j] *= Amax_inv;
+    // row j now contains a 1 at position j
+    // all elements in columns with indices smaller than j are supposed to be
+    // zero due to previous eliminations (we do not set them to zero however to
+    // save computations)
+    if (j < 4) {
+      // we are not finished yet: use row j to eliminate all rows below row j
+      for (uint_fast8_t i = j + 1; i < 5; ++i) {
+        for (uint_fast8_t k = j + 1; k < 5; ++k) {
+          A[i][k] -= A[i][j] * A[j][k];
+        }
+        B[i] -= A[i][j] * B[j];
+      }
+    }
+  }
+  // the matrix now has the form
+  //  1  A01 A02 A03 A04 B0
+  //  0   1  A12 A13 A14 B1
+  //  0   0   1  A23 A24 B2
+  //  0   0   0   1  A34 B3
+  //  0   0   0   0   1  B4
+  // In other words: B[4] contains the value of the last variable
+  // use it to recursively solve for the others
+  for (uint_fast8_t i = 0; i < 4; ++i) {
+    for (uint_fast8_t j = 0; j < i + 1; ++j) {
+      B[3 - i] -= B[4 - j] * A[3 - i][4 - j];
+    }
+  }
+  return 0;
+}
+
+/**
+ * @brief Find the level populations for the given element at the given
+ * temperature.
+ *
+ * @param element LineCool5LvElem.
+ * @param coll_str_prefactor Prefactor for the collision strengths
+ * (in s^-1).
+ * @param T Temperature (in K).
+ * @param Tinv Inverse of the temperature (in K^-1).
+ * @param logT Natural logarithm of the temperature in K.
+ * @param lvpop Array to store the resulting level populations in.
+ */
+void LineCool::compute_5lvpop(
+    LineCool5LvElem element,
+    double coll_str_prefactor, double T, double Tinv, double logT,
+    double lvpop[5]) const {
+
+  double level_matrix[5][5];
+  // initialize the level populations and the first row of the coefficient
+  // matrix
+  for (uint_fast8_t i = 0; i < 5; ++i) {
+    level_matrix[0][i] = 1.;
+    lvpop[i] = 0.;
+  }
+  // the first row of the coefficient matrix expresses the constant number of
+  // particles: the sum of all level populations is unity
+  lvpop[0] = 1.;
+
+  // precompute the collision rates for the given temperature
+  double collision_rate_down[NTRANS];
+  double collision_rate_up[NTRANS];
+  for (int_fast32_t i = 0; i < NTRANS; ++i) {
+    const double coll_str =
+        coll_str_prefactor *
+        std::pow(T, 1. + _5lv_coll_str[element][i][0]) *
+        (_5lv_coll_str[element][i][1] +
+         _5lv_coll_str[element][i][2] * Tinv +
+         _5lv_coll_str[element][i][3] * logT +
+         _5lv_coll_str[element][i][4] * T *
+             (1. +
+              (_5lv_coll_str[element][i][5] - 1.) *
+                  std::pow(T, _5lv_coll_str[element][i][6])));
+    collision_rate_down[i] = coll_str;
+    collision_rate_up[i] =
+        coll_str *
+        std::exp(-_5lv_energy_diff[element][i] * Tinv);
+  }
+
+  level_matrix[1][0] = collision_rate_up[TRANS_0_to_1] *
+                       _5lv_ginv[element][0];
+  level_matrix[1][1] =
+      -(_5lv_A[element][TRANS_0_to_1] +
+        _5lv_ginv[element][1] *
+            (collision_rate_down[TRANS_0_to_1] +
+             collision_rate_up[TRANS_1_to_2] +
+             collision_rate_up[TRANS_1_to_3] +
+             collision_rate_up[TRANS_1_to_4]));
+  level_matrix[1][2] =
+      _5lv_A[element][TRANS_1_to_2] +
+      _5lv_ginv[element][2] *
+          collision_rate_down[TRANS_1_to_2];
+  level_matrix[1][3] =
+      _5lv_A[element][TRANS_1_to_3] +
+      _5lv_ginv[element][3] *
+          collision_rate_down[TRANS_1_to_3];
+  level_matrix[1][4] =
+      _5lv_A[element][TRANS_1_to_4] +
+      _5lv_ginv[element][4] *
+          collision_rate_down[TRANS_1_to_4];
+
+  level_matrix[2][0] = collision_rate_up[TRANS_0_to_2] *
+                       _5lv_ginv[element][0];
+  level_matrix[2][1] = collision_rate_up[TRANS_1_to_2] *
+                       _5lv_ginv[element][1];
+  level_matrix[2][2] =
+      -(_5lv_A[element][TRANS_0_to_2] +
+        _5lv_A[element][TRANS_1_to_2] +
+        _5lv_ginv[element][2] *
+            (collision_rate_down[TRANS_0_to_2] +
+             collision_rate_down[TRANS_1_to_2] +
+             collision_rate_up[TRANS_2_to_3] +
+             collision_rate_up[TRANS_2_to_4]));
+  level_matrix[2][3] =
+      _5lv_A[element][TRANS_2_to_3] +
+      collision_rate_down[TRANS_2_to_3] *
+          _5lv_ginv[element][3];
+  level_matrix[2][4] =
+      _5lv_A[element][TRANS_2_to_4] +
+      collision_rate_down[TRANS_2_to_4] *
+          _5lv_ginv[element][4];
+
+  level_matrix[3][0] = collision_rate_up[TRANS_0_to_3] *
+                       _5lv_ginv[element][0];
+  level_matrix[3][1] = collision_rate_up[TRANS_1_to_3] *
+                       _5lv_ginv[element][1];
+  level_matrix[3][2] = collision_rate_up[TRANS_2_to_3] *
+                       _5lv_ginv[element][2];
+  level_matrix[3][3] =
+      -(_5lv_A[element][TRANS_0_to_3] +
+        _5lv_A[element][TRANS_1_to_3] +
+        _5lv_A[element][TRANS_2_to_3] +
+        _5lv_ginv[element][3] *
+            (collision_rate_down[TRANS_0_to_3] +
+             collision_rate_down[TRANS_1_to_3] +
+             collision_rate_down[TRANS_2_to_3] +
+             collision_rate_up[TRANS_3_to_4]));
+  level_matrix[3][4] =
+      _5lv_A[element][TRANS_3_to_4] +
+      collision_rate_down[TRANS_3_to_4] *
+          _5lv_ginv[element][4];
+
+  level_matrix[4][0] = collision_rate_up[TRANS_0_to_4] *
+                       _5lv_ginv[element][0];
+  level_matrix[4][1] = collision_rate_up[TRANS_1_to_4] *
+                       _5lv_ginv[element][1];
+  level_matrix[4][2] = collision_rate_up[TRANS_2_to_4] *
+                       _5lv_ginv[element][2];
+  level_matrix[4][3] = collision_rate_up[TRANS_3_to_4] *
+                       _5lv_ginv[element][3];
+  level_matrix[4][4] =
+      -(_5lv_A[element][TRANS_0_to_4] +
+        _5lv_A[element][TRANS_1_to_4] +
+        _5lv_A[element][TRANS_2_to_4] +
+        _5lv_A[element][TRANS_3_to_4] +
+        _5lv_ginv[element][4] *
+            (collision_rate_down[TRANS_0_to_4] +
+             collision_rate_down[TRANS_1_to_4] +
+             collision_rate_down[TRANS_2_to_4] +
+             collision_rate_down[TRANS_3_to_4]));
+
+  // find level populations
+  const int_fast32_t status =
+      solve_system_of_linear_equations(level_matrix, lvpop);
+  if (status != 0) {
+    // something went wrong
+    std::printf("Singular matrix in level population computation"
+		"(element: %i, T: %g, n_e: %g)!",
+		element, 1./Tinv, coll_str_prefactor/
+		(_coll_str_prefactor * std::sqrt(Tinv)));
+  }
+}
+
+/**
+ * @brief Find the level population of the second level for the given two level
+ * element at the given temperature.
+ *
+ * @param element LineCool2LvElem.
+ * @param coll_str_prefactor Prefactor for the collision strengths
+ * (in s^-1).
+ * @param T Temperature (in K).
+ * @param Tinv Inverse temperature (in K^-1).
+ * @param logT Natural logarithm of the temperature in K.
+ * @return Level population of the second level.
+ */
+double LineCool::compute_2lvpop(
+    LineCool2LvElem element, double coll_str_prefactor,
+    double T, double Tinv, double logT) const {
+
+  // note that we need to remap the element index
+  const int_fast32_t i = element - LINECOOL_5LV_NELEM;
+  const double ksi = _2lv_energy_diff[i];
+  const double A = _2lv_A[i];
+  const double coll_str =
+      coll_str_prefactor *
+      std::pow(T, 1. + _2lv_coll_str[i][0]) *
+      (_2lv_coll_str[i][1] +
+       _2lv_coll_str[i][2] * Tinv +
+       _2lv_coll_str[i][3] * logT +
+       _2lv_coll_str[i][4] * T *
+           (1. +
+            (_2lv_coll_str[i][5] - 1.) *
+                std::pow(T, _2lv_coll_str[i][6])));
+  const double inv_omega_1 = _2lv_ginv[i][0];
+  const double inv_omega_2 = _2lv_ginv[i][1];
+  const double Texp = std::exp(-ksi * Tinv);
+  return coll_str * Texp * inv_omega_1 /
+         (A + coll_str * (inv_omega_2 + Texp * inv_omega_1));
+}
+
+/**
+ * @brief Get the radiative energy losses due to line cooling at the given
+ * temperature, electron density and coolant abundances.
+ *
+ * We consider 12 ions; 10 with 5 low lying collisionally excited levels, and 2
+ * with only 2 levels. For the former, we solve equations (3.27) and (3.28) in
+ * Osterbrock & Ferland (2006), with the cooling rate given by equation (3.29).
+ *
+ * For the latter, we use equations (3.24) and (3.25), together with the total
+ * number of ions:
+ *\f[
+ * n_1 + n_2 = n.
+ * \f]
+ * Equation (3.24) gives a relation between the level populations of ion 1 and
+ * 2:
+ * \f[
+ * \frac{n_2}{n_1} = f,
+ * \f]
+ * which together with the total number of ions leads to
+ * \f[
+ * n_2 = \frac{f}{1+f}n.
+ * \f]
+ * We substitute this in equation (3.25).
+ *
+ * @param temperature Temperature (in K).
+ * @param electron_density Electron density (in m^-3).
+ * @param abundances Abdunances of coolants.
+ * @return Radiative cooling per hydrogen atom (in kg m^2s^-3).
+ */
+double LineCool::get_linecooling_all(
+    double temperature, double electron_density,
+    const double abundances[LINECOOL_NELEM]) const {
+
+  if (electron_density == 0.) {
+    // we cannot return a 0 cooling rate, because that crashes our iterative
+    // temperature finding scheme
+    return 1.e-99;
+  }
+
+  /// initialize some variables
+
+  // Boltzmann constant (in J s^-1)
+  const double kb = 1.38064852e-16;
+
+  // _coll_str_prefactor has units K^0.5 m^3 s^-1;
+  // coll_str_prefactor has units s^-1
+  const double coll_str_prefactor =
+      _coll_str_prefactor * electron_density / std::sqrt(temperature);
+  const double Tinv = 1. / temperature;
+  const double logT = std::log(temperature);
+
+  /// five level elements
+
+  double cooling = 0.;
+  for (int_fast32_t j = 0; j < LINECOOL_5LV_NELEM; ++j) {
+
+    const LineCool5LvElem element =
+        static_cast< LineCool5LvElem >(j);
+
+    double lvpop[5];
+    compute_5lvpop(element, coll_str_prefactor,
+		   temperature, Tinv, logT, lvpop);
+
+    // compute the cooling for each transition
+    // this corresponds to equation (3.29) in Osterbrock & Ferland (2006)
+    const double cl2 =
+        lvpop[1] *
+        _5lv_A[j][TRANS_0_to_1] *
+        _5lv_energy_diff[j][TRANS_0_to_1];
+    const double cl3 =
+        lvpop[2] *
+        (_5lv_A[j][TRANS_0_to_2] *
+             _5lv_energy_diff[j][TRANS_0_to_2] +
+         _5lv_A[j][TRANS_1_to_2] *
+             _5lv_energy_diff[j][TRANS_1_to_2]);
+    const double cl4 =
+        lvpop[3] *
+        (_5lv_A[j][TRANS_0_to_3] *
+             _5lv_energy_diff[j][TRANS_0_to_3] +
+         _5lv_A[j][TRANS_1_to_3] *
+             _5lv_energy_diff[j][TRANS_1_to_3] +
+         _5lv_A[j][TRANS_2_to_3] *
+             _5lv_energy_diff[j][TRANS_2_to_3]);
+    const double cl5 =
+        lvpop[4] *
+        (_5lv_A[j][TRANS_0_to_4] *
+             _5lv_energy_diff[j][TRANS_0_to_4] +
+         _5lv_A[j][TRANS_1_to_4] *
+             _5lv_energy_diff[j][TRANS_1_to_4] +
+         _5lv_A[j][TRANS_2_to_4] *
+             _5lv_energy_diff[j][TRANS_2_to_4] +
+         _5lv_A[j][TRANS_3_to_4] *
+             _5lv_energy_diff[j][TRANS_3_to_4]);
+
+    cooling += abundances[j] * kb * (cl2 + cl3 + cl4 + cl5);
+  }
+
+  /// 2 level atoms
+
+  // offset of two level elements in the abundances array
+  const int_fast32_t offset = LINECOOL_5LV_NELEM;
+  for (int_fast32_t i = 0; i < LINECOOL_2LV_NELEM; ++i) {
+
+    const int_fast32_t index = i + offset;
+    const LineCool2LvElem element =
+        static_cast< LineCool2LvElem >(index);
+    const double level_population = compute_2lvpop(
+        element, coll_str_prefactor, temperature, Tinv, logT);
+    cooling += abundances[index] * kb * _2lv_energy_diff[i] *
+               _2lv_A[i] * level_population;
+  }
+
+  return cooling;
+}
+
+double LineCool::get_linecooling_5lv(
+    LineCool5LvElem element, double temperature, double electron_density,
+    double abundance) const {
+
+  if (electron_density == 0.) {
+    // we cannot return a 0 cooling rate, because that crashes our iterative
+    // temperature finding scheme
+    return 1.e-99;
+  }
+
+  // initialize some variables
+  
+  // Boltzmann constant (in J s^-1)
+  const double kb = 1.38064852e-16;
+  
+  // _coll_str_prefactor has units K^0.5 m^3 s^-1;
+  // coll_str_prefactor has units s^-1
+  const double coll_str_prefactor =
+      _coll_str_prefactor * electron_density / std::sqrt(temperature);
+  const double Tinv = 1. / temperature;
+  const double logT = std::log(temperature);
+  
+  double cooling = 0.;
+  double lvpop[5];
+  compute_5lvpop(element, coll_str_prefactor, temperature, Tinv, logT, lvpop);
+
+  int j = element;
+  
+  // compute the cooling for each transition
+  // this corresponds to equation (3.29) in Osterbrock & Ferland (2006)
+  const double cl2 = lvpop[1] * _5lv_A[j][TRANS_0_to_1] *
+        _5lv_energy_diff[j][TRANS_0_to_1];
+  const double cl3 = lvpop[2] * (_5lv_A[j][TRANS_0_to_2] *
+				 _5lv_energy_diff[j][TRANS_0_to_2] +
+				 _5lv_A[j][TRANS_1_to_2] *
+				 _5lv_energy_diff[j][TRANS_1_to_2]);
+  const double cl4 = lvpop[3] * (_5lv_A[j][TRANS_0_to_3] *
+				 _5lv_energy_diff[j][TRANS_0_to_3] +
+				 _5lv_A[j][TRANS_1_to_3] *
+				 _5lv_energy_diff[j][TRANS_1_to_3] +
+				 _5lv_A[j][TRANS_2_to_3] *
+				 _5lv_energy_diff[j][TRANS_2_to_3]);
+  const double cl5 = lvpop[4] * (_5lv_A[j][TRANS_0_to_4] *
+				 _5lv_energy_diff[j][TRANS_0_to_4] +
+				 _5lv_A[j][TRANS_1_to_4] *
+				 _5lv_energy_diff[j][TRANS_1_to_4] +
+				 _5lv_A[j][TRANS_2_to_4] *
+				 _5lv_energy_diff[j][TRANS_2_to_4] +
+				 _5lv_A[j][TRANS_3_to_4] *
+				 _5lv_energy_diff[j][TRANS_3_to_4]);
+
+  cooling += abundance * kb * (cl2 + cl3 + cl4 + cl5);
+
+  return cooling;
+}
+
+
+/**
+ * @brief Calculate the strength of all emission lines for which we have data.
+ *
+ * @param temperature Temperature (in K).
+ * @param electron_density Electron density (in m^-3).
+ * @param abundances Ion abundances.
+ * @return std::vector containing, for each ion, a std::vector of line strengths
+ * for each transition (in J s^-1).
+ */
+std::vector< std::vector< double > > LineCool::get_line_str(
+    double temperature, double electron_density,
+    const double abundances[LINECOOL_NELEM]) const {
+
+  /// initialize some variables
+
+  // Boltzmann constant (in J s^-1)
+  const double kb = 1.38064852e-16;
+
+  const double coll_str_prefactor =
+      _coll_str_prefactor * electron_density / std::sqrt(temperature);
+  const double Tinv = 1. / temperature;
+  const double logT = std::log(temperature);
+
+  // vector to store line strengths in
+  std::vector< std::vector< double > > line_str(
+      LINECOOL_NELEM);
+
+  /// 5 level elements
+
+  for (int_fast32_t j = 0; j < LINECOOL_5LV_NELEM; ++j) {
+
+    line_str[j].resize(NTRANS);
+
+    const LineCool5LvElem element =
+        static_cast< LineCool5LvElem >(j);
+
+    double lvpop[5];
+    compute_5lvpop(element, coll_str_prefactor,
+		   temperature, Tinv, logT, lvpop);
+
+    const double prefactor = abundances[j] * kb;
+
+    line_str[j][TRANS_0_to_1] =
+        prefactor * lvpop[1] *
+        _5lv_A[j][TRANS_0_to_1] *
+        _5lv_energy_diff[j][TRANS_0_to_1];
+    line_str[j][TRANS_0_to_2] =
+        prefactor * lvpop[2] *
+        _5lv_A[j][TRANS_0_to_2] *
+        _5lv_energy_diff[j][TRANS_0_to_2];
+    line_str[j][TRANS_1_to_2] =
+        prefactor * lvpop[2] *
+        _5lv_A[j][TRANS_1_to_2] *
+        _5lv_energy_diff[j][TRANS_1_to_2];
+    line_str[j][TRANS_0_to_3] =
+        prefactor * lvpop[3] *
+        _5lv_A[j][TRANS_0_to_3] *
+        _5lv_energy_diff[j][TRANS_0_to_3];
+    line_str[j][TRANS_1_to_3] =
+        prefactor * lvpop[3] *
+        _5lv_A[j][TRANS_1_to_3] *
+        _5lv_energy_diff[j][TRANS_1_to_3];
+    line_str[j][TRANS_2_to_3] =
+        prefactor * lvpop[3] *
+        _5lv_A[j][TRANS_2_to_3] *
+        _5lv_energy_diff[j][TRANS_2_to_3];
+    line_str[j][TRANS_0_to_4] =
+        prefactor * lvpop[4] *
+        _5lv_A[j][TRANS_0_to_4] *
+        _5lv_energy_diff[j][TRANS_0_to_4];
+    line_str[j][TRANS_1_to_4] =
+        prefactor * lvpop[4] *
+        _5lv_A[j][TRANS_1_to_4] *
+        _5lv_energy_diff[j][TRANS_1_to_4];
+    line_str[j][TRANS_2_to_4] =
+        prefactor * lvpop[4] *
+        _5lv_A[j][TRANS_2_to_4] *
+        _5lv_energy_diff[j][TRANS_2_to_4];
+    line_str[j][TRANS_3_to_4] =
+        prefactor * lvpop[4] *
+        _5lv_A[j][TRANS_3_to_4] *
+        _5lv_energy_diff[j][TRANS_3_to_4];
+  }
+
+  /// 2 level elements
+
+  // offset of two level elements in the abundances array
+  const int_fast32_t offset = LINECOOL_5LV_NELEM;
+  for (int_fast32_t i = 0; i < LINECOOL_2LV_NELEM; ++i) {
+
+    const int_fast32_t index = i + offset;
+
+    line_str[index].resize(1);
+
+    const LineCool2LvElem element =
+        static_cast< LineCool2LvElem >(index);
+
+    const double level_population = compute_2lvpop(
+        element, coll_str_prefactor, temperature, Tinv, logT);
+
+    line_str[index][0] = abundances[index] * kb * level_population *
+                               _2lv_energy_diff[i] *
+                               _2lv_A[i];
+  }
+
+  return line_str;
+}

@@ -1,2 +1,0 @@
-#input cpp file,    output exe,   output dir (same as the last part of dir variable in the input cpp file)
-main.c   main   out
