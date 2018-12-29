@@ -182,8 +182,8 @@ private:
 public:
   LineCool();
 
-  double get_A(LineCool5LvElem element,
-	       LineCoolTransition transition) const;
+  double get_EinsteinA(LineCool5LvElem element,
+		       LineCoolTransition transition) const;
   double get_energy_diff(LineCool5LvElem element,
 			 LineCoolTransition transition) const;
   double get_statistical_weight(LineCool5LvElem element,
@@ -194,13 +194,13 @@ public:
   double get_linecooling_all(double temperature, double electron_density,
 			     const double abundances[LINECOOL_NELEM]) const;
     
-  double get_linecooling_5lv(LineCool5LvElem element, double temperature,
-			     double electron_density, double abundance) const;
+  double get_linecool_5lv(LineCool5LvElem element, const double temperature,
+			  const double electron_density, const double abundance) const;
 
-  std::vector<std::vector <double> > get_line_str
-  (double temperature, double electron_density,
-   const double abundances[LINECOOL_NELEM]) const;
-  
+  void get_linecool_all(const double temperature, const double electron_density,
+			double abundances[LINECOOL_NELEM],
+			double *linecool_5lv, double *linecool_2lv);
+
 };
 
 #endif // LINECOOL_HPP

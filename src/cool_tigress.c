@@ -521,8 +521,16 @@ Real LP2Di_(const Real *xarr, const Real *yarr,
 Real fShield_CO_V09_(const Real NCO, const Real NH2);
 #endif  // SHIELDING
 
-Real get_trans_prob(enum LineCool5LvElem element,
-		    enum LineCoolTransition transition);
+Real get_EinsteinA(enum LineCool5LvElem element,
+	   enum LineCoolTransition transition);
+Real get_energy_diff(enum LineCool5LvElem element,
+		     enum LineCoolTransition transition);
+Real get_statistical_weight(enum LineCool5LvElem element, uint8_t level);
+Real get_linecool_5lv(enum LineCool5LvElem element, const Real T,
+		      const Real ne, const Real abundance);
+void get_linecool_all(const Real T, const Real ne,
+		      Real abundances[],
+		      Real *linecool_5lv, Real *linecool_2lv);
 
 /*----------------------------------------------------------------------------*/
 /* IMPLEMENTATION of FUCNTIONS                                                */
@@ -983,7 +991,7 @@ Real coolingCO(const Real x_e, const Real x_CO, const Real x_HI,
   const Real NCOeff = nCO / gradeff;
   //maximum temperature above which use Tmax for cooling rate interpolation
   const Real Tmax_CO = 2000.; 
-  Real T1 = 0;;
+  Real T1 = 0;
   if (T < Tmax_CO) {
     T1 = T;
   } else {
@@ -1139,9 +1147,9 @@ Real fShield_CO_V09_(const Real NCO, const Real NH2) {
 // linecool wrappers
 
 // Transition probability for deexcitation (in s^-1).
-Real get_A(enum LineCool5LvElem element,
-	   enum LineCoolTransition transition) {
-  return get_A_(element, transition);
+Real get_EinsteinA(enum LineCool5LvElem element,
+		   enum LineCoolTransition transition) {
+  return get_EinsteinA_(element, transition);
 }
 
 Real get_energy_diff(enum LineCool5LvElem element,
@@ -1154,8 +1162,13 @@ Real get_statistical_weight(enum LineCool5LvElem element,
   return get_statistical_weight_(element, level);
 }
 
-Real get_linecooling_5lv(enum LineCool5LvElem element, double temperature,
-                         double electron_density, double abundance) {
-  return get_linecooling_5lv_(element, temperature,
-                              electron_density, abundance);
+Real get_linecool_5lv(enum LineCool5LvElem element, const Real T,
+		      const Real ne, const Real abundance) {
+  return get_linecool_5lv_(element, T, ne, abundance);
+}
+
+void get_linecool_all(const Real T, const Real ne,
+		      Real abundances[],
+		      Real *linecool_5lv, Real *linecool_2lv) {
+  get_linecool_all_(T, ne, abundances, linecool_5lv, linecool_2lv);
 }

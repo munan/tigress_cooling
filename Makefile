@@ -1,52 +1,40 @@
-SHELL = /bin/sh
+DIRS = bin lib
 
-CC	= gcc
-CXX	= g++
+#-------------------------------------------------------------------------------
+#  target all:
+all:    dirs bin lib
 
-#CFLAGS = -Wall -g3 -O0 -ggdb
-CFLAGS 	= -Wall -O3
-LIBS	= -lm
-LIBNAME = cool_tigress
+help:
+	@echo "all:       create ($(DIRS)) subdirectory and make lib and bin"
+	@echo "dirs:      create ($(DIRS)) subdirectory"
+	@echo "lib:	  compile the code and create dynamic library file in lib"
+	@echo "bin:	  compile the code and create test c program file in bin"
+	@echo "clean:     clean /src subdirectory"
 
-OS	:= $(shell uname)
-ifeq ($(OS), Darwin)
-	CLIBFLAGS	= -MP -fPIC
-	DYNLIBFLAG	= -dynamiclib
-	LIBEXT		= dylib
-else ifeq ($(OS), Linux)
-        CLIBFLAGS	= -fPIC
-        DYNLIBFLAG	= -shared
-        LIBEXT		= so
-endif
+.PHONY: depend clean bin lib
+#-------------------------------------------------------------------------------
+#  target dirs:
+dirs:
+	-@for i in $(DIRS) ; do \
+	(if [ -d $$i ]; \
+	then \
+	    echo DIR $$i exists; \
+	else \
+	    echo DIR $$i created; \
+	    mkdir $$i; \
+	fi); done
 
-# -----------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#  target bin: runs make bin in /src
+bin:
+	(cd src; $(MAKE) bin)
 
-.PHONY: depend clean lib
-
-all: main lib
-
-main:
-	$(CXX) $(CFLAGS) $(CLIBFLAGS) $(DYNLIBFLAG) linecool.cpp -o liblinecool.$(LIBEXT)
-	$(CXX) $(CFLAGS) $(CLIBFLAGS) $(DYNLIBFLAG) -L. -llinecool linecool_c_wrapper.cpp -o liblinecool_c_wrapper.$(LIBEXT)
-	$(CC) $(CLIBFLAGS) $(DYNLIBFLAG) cool_tigress.c -L. -llinecool_c_wrapper -o $(LIBNAME).$(LIBEXT)
-	#$(CC) main.c -L. -llinecool_c_wrapper -o a
-
+#-------------------------------------------------------------------------------
+#  target lib: runs make lib in /src
 lib:
-	$(CXX) -c $(CFLAGS) $(CLIBFLAGS) linecool.cpp
-	$(CXX) -c $(CFLAGS) $(CLIBFLAGS) linecool_c_wrapper.cpp
-	$(CC) -c $(CFLAGS) $(CLIBFLAGS) cool_tigress.c
-	$(CC) $(CLIBFLAGS) $(DYNLIBFLAG) -lstdc++ -o $(LIBNAME).$(LIBEXT) cool_tigress.o linecool_c_wrapper.o linecool.o
+	(cd src; $(MAKE) lib)
 
-%.o : %.c
-	$(CC) -c $(CFLAGS) $(CLIBFLAGS) $< -o $@
-
-%.o : %.cpp
-	$(CXX) -c $(CFLAGS) $(CLIBFLAGS) $< -o $@
-
+#-------------------------------------------------------------------------------
+#  target clean:
 clean:
-	$(RM) *.o *.$(LIBEXT)
-	$(RM) .depend
-
-depend: $(SRCS)
-	makedepend  $^
-# -----------------------------------------------------------------------------------------
+	(cd src; $(MAKE) clean)

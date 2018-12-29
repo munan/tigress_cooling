@@ -1321,8 +1321,8 @@ LineCool::LineCool() {
 }
 
 // Transition probability for deexcitation (in s^-1).
-double LineCool::get_A(LineCool5LvElem element,
-		       LineCoolTransition transition) const {
+double LineCool::get_EinsteinA(LineCool5LvElem element,
+			       LineCoolTransition transition) const {
   return _5lv_A[element][transition];
 }
 
@@ -1755,9 +1755,10 @@ double LineCool::get_linecooling_all(
   return cooling;
 }
 
-double LineCool::get_linecooling_5lv(
-    LineCool5LvElem element, double temperature, double electron_density,
-    double abundance) const {
+
+double LineCool::get_linecool_5lv(
+    LineCool5LvElem element, const double temperature, const double electron_density,
+    const double abundance) const {
 
   if (electron_density == 0.) {
     // we cannot return a 0 cooling rate, because that crashes our iterative
@@ -1767,7 +1768,7 @@ double LineCool::get_linecooling_5lv(
 
   // initialize some variables
   
-  // Boltzmann constant (in J s^-1)
+  // Boltzmann constant (in erg/K)
   const double kb = 1.38064852e-16;
   
   // _coll_str_prefactor has units K^0.5 m^3 s^-1;
@@ -1816,14 +1817,14 @@ double LineCool::get_linecooling_5lv(
  * @brief Calculate the strength of all emission lines for which we have data.
  *
  * @param temperature Temperature (in K).
- * @param electron_density Electron density (in m^-3).
+ * @param electron_density Electron density (in cm^-3).
  * @param abundances Ion abundances.
  * @return std::vector containing, for each ion, a std::vector of line strengths
- * for each transition (in J s^-1).
+ * for each transition (in erg s^-1).
  */
-std::vector< std::vector< double > > LineCool::get_line_str(
-    double temperature, double electron_density,
-    const double abundances[LINECOOL_NELEM]) const {
+void LineCool::get_linecool_all(const double temperature, const double electron_density,
+				double abundances[LINECOOL_NELEM],
+				double *linecool_5lv, double *linecool_2lv) {
 
   /// initialize some variables
 
@@ -1835,64 +1836,45 @@ std::vector< std::vector< double > > LineCool::get_line_str(
   const double Tinv = 1. / temperature;
   const double logT = std::log(temperature);
 
-  // vector to store line strengths in
-  std::vector< std::vector< double > > line_str(
-      LINECOOL_NELEM);
-
   /// 5 level elements
 
   for (int_fast32_t j = 0; j < LINECOOL_5LV_NELEM; ++j) {
 
-    line_str[j].resize(NTRANS);
-
-    const LineCool5LvElem element =
-        static_cast< LineCool5LvElem >(j);
-
     double lvpop[5];
+    const LineCool5LvElem element = static_cast< LineCool5LvElem >(j);
     compute_5lvpop(element, coll_str_prefactor,
 		   temperature, Tinv, logT, lvpop);
 
     const double prefactor = abundances[j] * kb;
-
-    line_str[j][TRANS_0_to_1] =
-        prefactor * lvpop[1] *
-        _5lv_A[j][TRANS_0_to_1] *
+    linecool_5lv[j*NTRANS + TRANS_0_to_1] =
+        prefactor * lvpop[1] * _5lv_A[j][TRANS_0_to_1] *
         _5lv_energy_diff[j][TRANS_0_to_1];
-    line_str[j][TRANS_0_to_2] =
-        prefactor * lvpop[2] *
-        _5lv_A[j][TRANS_0_to_2] *
+    linecool_5lv[j*NTRANS + TRANS_0_to_2] =
+        prefactor * lvpop[2] * _5lv_A[j][TRANS_0_to_2] *
         _5lv_energy_diff[j][TRANS_0_to_2];
-    line_str[j][TRANS_1_to_2] =
-        prefactor * lvpop[2] *
-        _5lv_A[j][TRANS_1_to_2] *
+    linecool_5lv[j*NTRANS + TRANS_1_to_2] =
+        prefactor * lvpop[2] * _5lv_A[j][TRANS_1_to_2] *
         _5lv_energy_diff[j][TRANS_1_to_2];
-    line_str[j][TRANS_0_to_3] =
-        prefactor * lvpop[3] *
-        _5lv_A[j][TRANS_0_to_3] *
+    linecool_5lv[j*NTRANS + TRANS_0_to_3] =
+        prefactor * lvpop[3] * _5lv_A[j][TRANS_0_to_3] *
         _5lv_energy_diff[j][TRANS_0_to_3];
-    line_str[j][TRANS_1_to_3] =
-        prefactor * lvpop[3] *
-        _5lv_A[j][TRANS_1_to_3] *
+    linecool_5lv[j*NTRANS + TRANS_1_to_3] =
+        prefactor * lvpop[3] * _5lv_A[j][TRANS_1_to_3] *
         _5lv_energy_diff[j][TRANS_1_to_3];
-    line_str[j][TRANS_2_to_3] =
-        prefactor * lvpop[3] *
-        _5lv_A[j][TRANS_2_to_3] *
+    linecool_5lv[j*NTRANS + TRANS_2_to_3] =
+        prefactor * lvpop[3] * _5lv_A[j][TRANS_2_to_3] *
         _5lv_energy_diff[j][TRANS_2_to_3];
-    line_str[j][TRANS_0_to_4] =
-        prefactor * lvpop[4] *
-        _5lv_A[j][TRANS_0_to_4] *
+    linecool_5lv[j*NTRANS + TRANS_0_to_4] =
+        prefactor * lvpop[4] * _5lv_A[j][TRANS_0_to_4] *
         _5lv_energy_diff[j][TRANS_0_to_4];
-    line_str[j][TRANS_1_to_4] =
-        prefactor * lvpop[4] *
-        _5lv_A[j][TRANS_1_to_4] *
+    linecool_5lv[j*NTRANS + TRANS_1_to_4] =
+        prefactor * lvpop[4] * _5lv_A[j][TRANS_1_to_4] *
         _5lv_energy_diff[j][TRANS_1_to_4];
-    line_str[j][TRANS_2_to_4] =
-        prefactor * lvpop[4] *
-        _5lv_A[j][TRANS_2_to_4] *
+    linecool_5lv[j*NTRANS + TRANS_2_to_4] =
+        prefactor * lvpop[4] * _5lv_A[j][TRANS_2_to_4] *
         _5lv_energy_diff[j][TRANS_2_to_4];
-    line_str[j][TRANS_3_to_4] =
-        prefactor * lvpop[4] *
-        _5lv_A[j][TRANS_3_to_4] *
+    linecool_5lv[j*NTRANS + TRANS_3_to_4] =
+        prefactor * lvpop[4] * _5lv_A[j][TRANS_3_to_4] *
         _5lv_energy_diff[j][TRANS_3_to_4];
   }
 
@@ -1900,22 +1882,17 @@ std::vector< std::vector< double > > LineCool::get_line_str(
 
   // offset of two level elements in the abundances array
   const int_fast32_t offset = LINECOOL_5LV_NELEM;
+
   for (int_fast32_t i = 0; i < LINECOOL_2LV_NELEM; ++i) {
 
     const int_fast32_t index = i + offset;
-
-    line_str[index].resize(1);
-
-    const LineCool2LvElem element =
-        static_cast< LineCool2LvElem >(index);
-
+    const LineCool2LvElem element = static_cast< LineCool2LvElem >(index);
     const double level_population = compute_2lvpop(
         element, coll_str_prefactor, temperature, Tinv, logT);
 
-    line_str[index][0] = abundances[index] * kb * level_population *
-                               _2lv_energy_diff[i] *
-                               _2lv_A[i];
+    linecool_2lv[i] = abundances[index] * kb * level_population *
+      _2lv_energy_diff[i] * _2lv_A[i];
   }
 
-  return line_str;
+  return;
 }

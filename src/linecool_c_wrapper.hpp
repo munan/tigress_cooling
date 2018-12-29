@@ -47,14 +47,18 @@ extern "C" {
 
 #endif
 
-  double get_A_(enum LineCool5LvElem element,
-                enum LineCoolTransition transition);
+  double get_EinsteinA_(enum LineCool5LvElem element,
+			enum LineCoolTransition transition);
   double get_energy_diff_(enum LineCool5LvElem element,
                           enum LineCoolTransition transition);
   double get_statistical_weight_(enum LineCool5LvElem element,
-                                 uint8_t level);
-  double get_linecooling_5lv_(enum LineCool5LvElem element, double temperature,
-                              double electron_density, double abundance);
+                                 uint_fast8_t level);
+  double get_linecool_5lv_(enum LineCool5LvElem element, const double temperature,
+                              const double electron_density, const double abundance);
+
+  void get_linecool_all_(const double temperature, const double electron_density,
+			 double abundances[],
+			 double *linecool_5lv, double *linecool_2lv);
 
 #ifdef __cplusplus
 }
