@@ -1,12 +1,13 @@
 """
-This module defines python wrappers to the cool_tigress c routines.
+This module defines python wrappers to the cool_tigress and linecool c routines.
 Wrappers are not optimized and are not appropriate for efficient calculation.
 Basic code structure based on shell_sim.py in
 https://bitbucket.org/krumholz/dusty_resolution_tests
 """
 
 # List of routines provided
-__all__ = ['fH2', 'fCplus', 'fHplus', 'fions', 'fe', 'fCO',
+__all__ = [ # From cool_tigress.c
+           'fH2', 'fCplus', 'fHplus', 'fions', 'fe', 'fCO',
            'heatingCR', 'heatingH2pump', 'heatingPE',
            'coolingLya', 'coolingOI', 'coolingCII', 'coolingCI',
            'coolingCO', 'coolingRec', 'coolingHot',
@@ -14,85 +15,40 @@ __all__ = ['fH2', 'fCplus', 'fHplus', 'fions', 'fe', 'fCO',
            'get_heating', 'get_cooling',
            'CII_rec_rate_', 'q10CII_', 'cooling2Level_', 'cooling3Level_',
            'fShield_CO_V09_',
-           # From linecool
+           # From linecool.cpp
            'get_EinsteinA',
            'get_energy_diff',
            'get_statistical_weight',
            'get_linecool_5lv',
-           'get_linecool_all'
+           'get_linecool_all',
+           'Photx'
            ]
 
 # Imports
+import os
 import numpy as np
 import numpy.ctypeslib as npct
 from ctypes import c_double, c_int, c_uint8, \
     POINTER, byref  # Structure, c_bool, pointer
-from aenum import IntEnum, NoAlias
-import os
-
 import astropy.constants as ac
+
+# Import other objects here...(temporary)
+from species_enum import EnumAtom, EnumLineCoolElem, EnumLineCoolTransition
+from photx import Photx
+from rec_rate import RecRate
+
+# Number of five-level and two-level species
+_N2LV = 3
+_N5LV = len(EnumLineCoolElem) - _N2LV
+_NTRANS5LV = len(EnumLineCoolTransition)
 
 # Utility type definition
 LP_c_double = POINTER(c_double)
 array_1d_double = npct.ndpointer(dtype=c_double, ndim=1,
                                  flags="CONTIGUOUS")
+
 # array_1d_int = npct.ndpointer(dtype=c_int, ndim=1,
 #                               flags="CONTIGUOUS")
-
-
-class CtypesEnum(IntEnum):
-    """A ctypes-compatible IntEnum superclass."""
-    @classmethod
-    def from_param(cls, obj):
-        return int(obj)
-
-
-class LineCoolElemEnum(CtypesEnum):
-    """
-    Should be identical to enum in header files
-    """
-
-    # https://stackoverflow.com/questions/31537316/python-enums-with-duplicate-values
-    _settings_ = NoAlias
-
-    # 5 level
-    NI = 0
-    NII = 1
-    OI = 2
-    OII = 3
-    OIII = 4
-    NeIII = 5
-    SII = 6
-    SIII = 7
-    CII = 8
-    CIII = 9
-
-    # 2 level
-    NIII = 10
-    NeII = 11
-    SIV = 12
-
-
-class LineCoolTransitionEnum(CtypesEnum):
-    """
-    Should be identical to enum in header files
-    """
-
-    T01 = 0
-    T02 = 1
-    T03 = 2
-    T04 = 3
-    T12 = 4
-    T13 = 5
-    T14 = 6
-    T23 = 7
-    T24 = 8
-    T34 = 9
-
-
-_N5LV = 10
-_NTRANS5LV = 10
-_N2LV = 3
 
 # Persistent value to hold pointer to c library
 __libptr = None
@@ -236,16 +192,16 @@ def loadlib(path=None):
 
     # functions from linecool module
     __libptr.get_EinsteinA.restype = c_double
-    __libptr.get_EinsteinA.argtypes = [LineCoolElemEnum, c_int]
+    __libptr.get_EinsteinA.argtypes = [EnumLineCoolElem, c_int]
 
     __libptr.get_energy_diff.restype = c_double
-    __libptr.get_energy_diff.argtypes = [LineCoolElemEnum, c_int]
+    __libptr.get_energy_diff.argtypes = [EnumLineCoolElem, c_int]
 
     __libptr.get_statistical_weight.restype = c_double
-    __libptr.get_statistical_weight.argtypes = [LineCoolElemEnum, c_uint8]
+    __libptr.get_statistical_weight.argtypes = [EnumLineCoolElem, c_uint8]
 
     __libptr.get_linecool_5lv.restype = c_double
-    __libptr.get_linecool_5lv.argtypes = [LineCoolElemEnum, c_double,
+    __libptr.get_linecool_5lv.argtypes = [EnumLineCoolElem, c_double,
                                           c_double, c_double]
 
     __libptr.get_linecool_all.restype = None
@@ -534,7 +490,7 @@ def get_linecool_5lv(elem, T, ne, abundance):
 
 def get_linecool_abd_arr(abd):
 
-    Elem = LineCoolElemEnum
+    Elem = EnumLineCoolElem
     abd_arr = np.empty(_N5LV + _N2LV)
     for elem in Elem:
         abd_arr[elem.value] = abd[elem.name]
@@ -757,8 +713,8 @@ class LineCool(object):
     def __init__(self, n_e=1e2, T=8.0e3, kind='Orion'):
 
         # Enum objects
-        self.Elem = LineCoolElemEnum
-        self.Trans = LineCoolTransitionEnum
+        self.Elem = EnumLineCoolElem
+        self.Trans = EnumLineCoolTransition
 
         self.n_e = n_e
         self.T = T
@@ -778,7 +734,7 @@ class LineCool(object):
         Hydrogen"""
         T4 = T/1e4
         return 2.59e-13*(T4)**(-0.833 - 0.035*np.log(T4))
-    
+
     def get_linecool_all(self):
 
         cool_all = get_linecool_all(self.T, self.n_e, self.abd)
