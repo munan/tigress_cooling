@@ -38,8 +38,12 @@ class SEDIntegrate(object):
 
         # bands
         self.wl_lim = {
-            # H-ionizing
+            # H0-ionizing
             'H0': (0.0, 912.11),
+            # He0-ionizing
+            'He0': (0.0, 504.21),
+            # H0ionizing, but not He0-ionizing
+            'H0-He0': (504.21, 912.11),
             # 6.0 - 13.6 eV (912 - 2066 Ang)
             'FUV': (912.11, (ac.h*ac.c/(6.0*au.eV)).to('Angstrom').value),
             # Lyman-Werner band
