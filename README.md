@@ -1,26 +1,17 @@
-Heating and cooling functions for TIGRESS simulation
+Heating and cooling functions for TIGRESS simulation.
 
 Implementation is in tigress_cool.h and tigress_cool.c
 Please check the TODO comments in these two files for integrating it with
-Athena-TGRESS code
+Athena-TIGRESS code. Original implementation by Munan Gong. 
 
-An example is included for solar neighborhood conditions with equilibrium
-temperature at a range of densities in "main.c" file (the equilibrium temperature 
-is from equilibrium chemistry calculations of Gong, Ostriker and Wolfire 2017). 
-You can run the example by 
+Linecooling functions are from photoionization code [CMacIonize](https://github.com/bwvdnbro/CMacIonize).
 
-$python run.py
+Python wrappers written by Jeong-Gyu Kim.
 
-Then you can use the ipython notebook
+Run
 
-tigress_cooling.ipynb
+`$ make lib`
 
-in the "script/" folder to plot the results compared to the original TIGRESS
-heating and cooling rates (Koyama and Inutsuka 2002).
+to create shared library files.
 
-A detailed documentation is included in the "doc/" folder. Please pay special
-attention to Section 6: notes for implementation in TIGRESS.
-
-Enjoy!
-
-Munan
+Python package [aenum](https://pypi.org/project/aenum/) is required.
