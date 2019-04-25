@@ -22,7 +22,8 @@ class SEDIntegrate(object):
     eV = (1.0*au.eV).cgs.value
     Lsun = ac.L_sun.cgs.value
     
-    def __init__(self, sed_kind='slug', integrator_method='simps'):
+    def __init__(self, output_dir='../../slug_cluster_data',
+                 sed_kind='slug', integrator_method='simps'):
         
         self.integrator = SEDIntegrate.integrators[integrator_method]
         self.ea = EnumAtom
@@ -31,7 +32,7 @@ class SEDIntegrate(object):
         
         # Slug SED
         if sed_kind == 'slug':
-            self.slug = SEDSlug(output_dir='../../slug_cluster_data')
+            self.slug = SEDSlug(output_dir=output_dir)
             self.sed_all = self.slug.get_sed_med_avg()
             self.time = self.sed_all['time']/1e6
             self.wl = self.sed_all['wl']
@@ -44,10 +45,12 @@ class SEDIntegrate(object):
             'He0': (0.0, 504.21),
             # H0ionizing, but not He0-ionizing
             'H0-He0': (504.21, 912.11),
-            # 6.0 - 13.6 eV (912 - 2066 Ang)
+            # FUV: 6.0 - 13.6 eV (912 - 2066 Ang)
             'FUV': (912.11, (ac.h*ac.c/(6.0*au.eV)).to('Angstrom').value),
             # Lyman-Werner band
-            'LW': (912.11, 1108.0)
+            'LW': (912.11, 1108.0),
+            # FUV + Optical
+            'FUV+Opt': (912.11, 7500.0)
             }
     
     def set_species(self):
@@ -174,7 +177,7 @@ class SEDIntegrate(object):
         return r
         
     def plt_sed(self, logM=5.0, teval=np.array([0.1, 3, 5, 10, 40]),
-                kind='med', add_label=False, **plt_kwargs):        
+                kind='med', add_label=False, **plt_kwargs):
         
         sed = self.get_sed(logM=logM, teval=teval, kind=kind)
         for i in range(sed.shape[0]):
