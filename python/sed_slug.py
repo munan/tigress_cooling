@@ -51,7 +51,8 @@ class SEDSlug(object):
         """
         
         print('logM{:02d} proc: '.format(int(10.0*logM)), end=' ')
-        
+
+        self.ntrial = 0
         for i, proc in enumerate(self.proc_all):
             print(proc, end=' ')
             self.model_name = self.model_base + \
@@ -65,22 +66,24 @@ class SEDSlug(object):
             self.spec = read_cluster_spec(self.model_name,
                                           output_dir=self.output_dir,
                                           fmt=self.fmt)
-            
+
             trial = np.unique(self.spec.trial)
-            self.ntrial = len(trial)
-            self.ntime = self.spec.spec.shape[0] // self.ntrial
-            self.time = self.phot.time[0:self.ntime]
+            self.ntrial += len(trial)
+            if i == 0:
+                self.ntime = self.spec.spec.shape[0] // self.ntrial
+                self.time = self.phot.time[0:self.ntime]
+
             sed_ = np.reshape(self.spec.spec,
-                              (self.ntrial, self.ntime, self.spec.wl.size))
+                              (len(trial), self.ntime, self.spec.wl.size))
             sed_ = sed_ / self.prop.target_mass[0]
+
             if i == 0:
                 self.sed = sed_
             else:
-                self.sed = np.vstack((self.sed, sed_))                
-            # if i >= 0: # for test
-            #     break
-            
+                self.sed = np.vstack((self.sed, sed_))
+
         print(' ')
+                
         return self.time, self.spec.wl, self.sed
         
     def get_sed_med_avg(self, force_override=False, verbose=True):
