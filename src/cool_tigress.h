@@ -7,7 +7,8 @@
 /*----------------------------------------------------------------------------*/
 /* PUBLIC FUCNTIONS                                                           */
 /*----------------------------------------------------------------------------*/
-void get_abundances(const Real nH, const Real T, const Real dvdr, const Real Z,
+void get_abundances(bool flag_fast, 
+                    const Real nH, const Real T, const Real dvdr, const Real Z,
                     const Real xi_CR, const Real G_PE, const Real G_CI,
                     const Real G_CO, const Real G_H2,
                     Real *px_e, Real *px_HI, Real *px_H2, Real *px_Cplus,
