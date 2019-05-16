@@ -95,6 +95,9 @@
 #include "linecool_c_wrapper.hpp"
 #define SHIELDING
 
+//TODO: lnTe in fHplus, temperature dependent kgr..
+
+
 //TODO: include ../defs.h which has definition of MIN and MAX, then delete the
 //two definitions below
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
@@ -683,7 +686,6 @@ Real fCO(const Real x_H2, const Real x_Cplus, const Real nH,
   Real ncrit2 = 0;
   Real x_CO = 0;
   Real x_CO_max1 = 0;
-  Real x_CO_max2 = 0;
   term1 = MAX(term1, 1.);
   ncrit2 = 2.*pow(term1, pow(G_CO, 1./3.)) * (50.*kcr16/pow(Z_d, 1.4));
   if (nH >= ncrit2) {
@@ -693,9 +695,7 @@ Real fCO(const Real x_H2, const Real x_Cplus, const Real nH,
   }
   x_CO *= xCtot;
   x_CO_max1 = xCtot - x_Cplus;
-  x_CO_max2 = xCtot * x_H2 * 2.;
   x_CO = MIN(x_CO, x_CO_max1);
-  x_CO = MIN(x_CO, x_CO_max2);
   return x_CO;
 }
 
