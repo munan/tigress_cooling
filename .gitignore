@@ -5,3 +5,4 @@
 *.pyc
 Makefile
 out/
+out_fast/

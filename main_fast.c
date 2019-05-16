@@ -2,7 +2,7 @@
 #include "cool_tigress.h"
 
 int main() {
-	const char dir[] = "out/";
+	const char dir[] = "out_fast/";
   const Real dvdr = 3 * 3e-14;
   const Real Z = 1;
   const Real xi_CR = 2e-16;
@@ -110,7 +110,7 @@ int main() {
     nH = nH_arr[i];
     T = T_arr[i];
     //calculate chemical abundances first
-    get_abundances(false, nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
+    get_abundances(true, nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
                    &x_e, &x_HI, &x_H2, &x_Cplus, &x_CI, &x_CO, &x_OI);
     //heating rate, in unit [erg s^{-1} cm^3]
     h_tot = heating(x_e, x_HI, x_H2, nH, T, Z, xi_CR, G_PE, G_H2);
