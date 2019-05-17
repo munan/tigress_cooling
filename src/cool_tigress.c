@@ -31,11 +31,13 @@
  * xHetot = 0.1 (helium abundance)
  *
  * CONTAINS PUBLIC FUNCTIONS:
- * get_abundances(flag_fast, nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
+ * get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
  *                &x_e, &x_HI, &x_H2, &x_Cplus, &x_CI, &x_CO, &x_OI);
- * get_heating(x_e, x_HI, x_H2, nH, T, Z, xi_CR, G_PE, G_H2, flag_fast)
+ * get_abundances_fast(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
+ *                     &x_e, &x_HI, &x_H2, &x_Cplus, &x_CI, &x_CO, &x_OI);
+ * get_heating(x_e, x_HI, x_H2, nH, T, Z, xi_CR, G_PE, G_H2)
  * get_cooling(x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI, 
- *             nH, T, dvdr, Z, G_PE, flag_fast)
+ *             nH, T, dvdr, Z, G_PE)
  *
  * Notes:
  * - Input parameters nH, T, dvdr are in CGS units, radiation field G_i in
@@ -46,7 +48,7 @@
  * etc. are in units of [ergs s^{-1} H^{-1}],
  * differs from the public get_heating() and get_cooling() functions by nH).
  * - Z = Z_d = Z_g is the same for gas and dust metallicity
- * - flag_fast: when set to be true, calculate approximate x_e abundance for
+ * - get_abundances_fast calculates approximate x_e abundance for
  * grain assisted recombination of H+ and C+ by only accounting 
  * for H+ reactions without grain assisted recombination. This under-estimates
  * the grain assisted reaction rates, and 
@@ -456,14 +458,14 @@ Real fCplus(const Real x_e, const Real x_H2, const Real nH, const Real T,
 	    const Real Z_d, const Real Z_g, const Real xi_CR, 
 	    const Real G_PE, const Real G_CI);
 //H+ abundance, depending on abundances of C+, e- and H2
-static Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
+Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
                    const Real nH, const Real T, const Real Z_d, const Real xi_CR,
                    const Real G_PE);
 //H+ abundance without grain assisted recombination,
 //depending on abundances of H2, ignoring electron contribution of C+
-static Real fHplus_ng(const Real x_H2,
-                      const Real nH, const Real T, const Real Z_d, const Real xi_CR,
-                      const Real G_PE);
+Real fHplus_ng(const Real x_H2,
+	       const Real nH, const Real T, const Real Z_d, const Real xi_CR,
+	       const Real G_PE);
 //ion abundances: ion = C+ + H+, depending on e- and H2 abundances.
 Real fions(const Real x_e, const Real x_H2, const Real nH, const Real T,
 	   const Real Z_d, const Real Z_g, const Real xi_CR, 
@@ -623,9 +625,9 @@ Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
 }
 
 Real fHplus_ng(const Real x_H2,
-               const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
+               const Real nH, const Real T, const Real Z_d, const Real xi_CR,
                const Real G_PE) {
-  Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow( 
+  Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow(
                1.0 + pow( 115188.0 / T, 0.407) , -2.242 );
   Real x_H_cr = 1. - 2. * x_H2;
   x_H_cr = MAX(x_H_cr, 0.0);
@@ -634,8 +636,8 @@ Real fHplus_ng(const Real x_H2,
   Real lnTe = log(T * 8.6173e-5);
   const Real T_coll = 7.0e2;
   if (T > T_coll) {
-    k_coll = exp( -3.271396786e1 + 
-                        (1.35365560e1 + (- 5.73932875 + (1.56315498 
+    k_coll = exp( -3.271396786e1 +
+                        (1.35365560e1 + (- 5.73932875 + (1.56315498
                       + (- 2.877056e-1 + (3.48255977e-2 + (- 2.63197617e-3
                       + (1.11954395e-4 + (-2.03914985e-6)
           *lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe
@@ -1084,24 +1086,46 @@ Real coolingHot(const Real T, const Real Z_g) {
   return (L_HHe + L_metal);
 }
 
-void get_abundances(bool flag_fast,
-                    const Real nH, const Real T, const Real dvdr, const Real Z,
+void get_abundances_fast(const Real nH, const Real T, const Real dvdr, const Real Z,
+			 const Real xi_CR, const Real G_PE, const Real G_CI,
+			 const Real G_CO, const Real G_H2,
+			 Real *px_e, Real *px_HI, Real *px_H2, Real *px_Cplus,
+			 Real *px_CI, Real *px_CO, Real *px_OI) {
+
+  Real x_e, x_e_approx, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
+  
+  x_H2 = fH2(nH, T, Z, xi_CR, G_H2);
+  x_e_approx = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE);
+  x_Cplus = fCplus(x_e_approx, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_Hplus = fHplus(x_e_approx, x_H2, x_Cplus, nH, T, Z, xi_CR, G_PE);
+  x_e = x_Cplus + x_Hplus;
+  x_Cplus = fCplus(x_e, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_CO = fCO(x_H2, x_Cplus, nH, Z, Z, xi_CR, G_CO);
+  x_HI = MAX(1. - 2.0*x_H2 - x_Hplus, 0.);
+  x_CI = MAX(xCstd*Z - x_CO - x_Cplus, 0.);
+  x_OI = MAX(xOstd*Z - x_CO, 0.);
+  
+  *px_e = x_e;
+  *px_HI = x_HI;
+  *px_H2 = x_H2;
+  *px_Cplus=x_Cplus;
+  *px_CI = x_CI;
+  *px_CO = x_CO;
+  *px_OI = x_OI;
+  
+  return;
+}
+
+void get_abundances(const Real nH, const Real T, const Real dvdr, const Real Z,
                     const Real xi_CR, const Real G_PE, const Real G_CI,
                     const Real G_CO, const Real G_H2,
                     Real *px_e, Real *px_HI, Real *px_H2, Real *px_Cplus,
                     Real *px_CI, Real *px_CO, Real *px_OI) {
-  Real x_e, x_e_approx, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
+  Real x_e, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
   x_H2 = fH2(nH, T, Z, xi_CR, G_H2);
-  if (flag_fast) {
-    x_e_approx = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE);
-    x_Cplus = fCplus(x_e_approx, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
-    x_Hplus = fHplus(x_e_approx, x_H2, x_Cplus, nH, T, Z, xi_CR, G_PE);
-    x_e = x_Cplus + x_Hplus;
-  } else {
-    x_e = fe(x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
-    x_Cplus = fCplus(x_e, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
-    x_Hplus = fHplus(x_e, x_H2, x_Cplus, nH, T, Z, xi_CR, G_PE);
-  }
+  x_e = fe(x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_Cplus = fCplus(x_e, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_Hplus = fHplus(x_e, x_H2, x_Cplus, nH, T, Z, xi_CR, G_PE);
   x_CO = fCO(x_H2, x_Cplus, nH, Z, Z, xi_CR, G_CO);
   x_HI = MAX(1. - 2.0*x_H2 - x_Hplus, 0.);
   x_CI = MAX(xCstd*Z - x_CO - x_Cplus, 0.);
