@@ -449,12 +449,35 @@ static Real LP2Di_(const Real *xarr, const Real *yarr,
 
 Real fH2(const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
          const Real G_H2) {
+  const Real temp_coll_ = 7.0e2;
+  Real logT, logT4, k9l_, k9h_, k10l_, k10h_, ncrH2_, ncr, n2ncr, k_H2_H, k_H2_H2; 
+  if (T > temp_coll_) {
+    /*(15) H2 + *H -> 3 *H   
+     *(16) H2 + H2 -> H2 + 2 *H
+     * --(9) Density dependent. See Glover+MacLow2007*/
+    logT = log10(T);
+	  logT4 = log10(T/1.0e4);
+  	k9l_ = 6.67e-12 * sqrt(T) * exp(-(1. + 63590./T)); 
+    k9h_ = 3.52e-9 * exp(-43900.0 / T);
+    k10l_ = 5.996e-30 * pow(T, 4.1881) / pow((1.0 + 6.761e-6 * T), 5.6881)  
+            * exp(-54657.4 / T);
+    k10h_ = 1.3e-9 * exp(-53300.0 / T); 
+    ncrH2_ = pow(10, (4.845 - 1.3 * logT4 + 1.62 * logT4*logT4));
+    ncr = 2.*ncrH2_ ;
+    n2ncr = nH / ncr;
+    k_H2_H = pow(10, log10(k9h_) *  n2ncr/(1. + n2ncr) 
+                         + log10(k9l_) / (1. + n2ncr)) * nH;
+    k_H2_H2 = pow(10, log10(k10h_) *  n2ncr/(1. + n2ncr) 
+                         + log10(k10l_) / (1. + n2ncr)) * nH;
+  } else {
+    k_H2_H = 0.;
+    k_H2_H2 = 0.;
+  }
   Real kgr = 3.0e-17*Z_d;
-  Real R = kgr * nH / (2. * xi_CR);
-  Real a = 1.65*0.7;
-  Real c = R;
+  Real a = 2.31*xi_CR + 2*nH*k_H2_H - nH*k_H2_H2;
+  Real c = nH * kgr;
   Real k_FUV = 5.7e-11 * G_H2;
-  Real b = - (1.65*1.5 + 2.*R + k_FUV/(2.*xi_CR));
+  Real b = - (4.95*xi_CR + 2*nH*kgr + k_FUV + nH*k_H2_H);
   Real x_H2 = (-b - sqrt(b*b - 4*a*c) )/(2.*a);
   return x_H2;
 }
