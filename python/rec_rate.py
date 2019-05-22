@@ -233,6 +233,45 @@ class RecRate(object):
         T4 = T*1e-4
         return 2.54e-13*T4**(-0.8163 - 0.0208*np.log(T4))
 
+    
+    @staticmethod
+    def get_alpha_gr(T, psi, Z):
+
+        # Parameters for Fit (14.37) to Grain Recombination Rate coefficients
+        # alpha_gr(X +) for selected ions. (Draine 2011)
+        C = dict()
+        C['H'] = np.array([12.25, 8.074e-6, 1.378, 5.087e2, 1.586e-2, 0.4723, 1.102e-5])
+        C['He']= np.array([5.572, 3.185e-7, 1.512, 5.115e3, 3.903e-7, 0.4956, 5.494e-7])
+        C['C'] = np.array([45.58, 6.089e-3, 1.128, 4.331e2, 4.845e-2, 0.8120, 1.333e-4])
+        C['Mg']= np.array([2.510, 8.116e-8, 1.864, 6.170e4, 2.169e-6, 0.9605, 7.232e-5])
+        C['S'] = np.array([3.064, 7.769e-5, 1.319, 1.087e2, 3.475e-1, 0.4790, 4.689e-2])
+        C['Ca']= np.array([1.636, 8.208e-9, 2.289, 1.254e5, 1.349e-9, 1.1506, 7.204e-4])
+    
+        if Z == 1:
+            e = 'H'
+        elif Z == 2:
+            e = 'He'
+        elif Z == 6:
+            e = 'C'
+        elif Z == 12:
+            e = 'Mg'
+        elif Z == 16:
+            e = 'S'
+        elif Z == 20:
+            e = 'Ca'
+
+        return 1e-14*C[e][0]/(1.0 + C[e][1]*psi**C[e][2]*\
+                (1.0 + C[e][3]*T**C[e][4]*psi**(-C[e][5]-C[e][6]*np.log(T))))
+            
+    @staticmethod
+    def get_rec_rate_grain(ne, G0, T, Z):
+        """Compute grain assisted recombination coefficient
+        Ch 14.8 in Draine (2011)
+        """
+        
+        psi = G0*T**0.5/ne
+        return RecRate.get_alpha_gr(T, psi, Z)
+    
     def plt_rec_rate(self, Z, N, M=1):
 
         T = np.logspace(3, 6)
