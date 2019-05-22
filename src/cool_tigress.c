@@ -473,7 +473,7 @@ Real fions(const Real x_e, const Real x_H2, const Real nH, const Real T,
 //e- abundances, solved from iteration, assume e- balances from C+ and H+
 Real fe(const Real x_H2, const Real nH, const Real T,
 	const Real Z_d, const Real Z_g, const Real xi_CR, 
-	const Real G_PE, const Real G_CI);
+	const Real G_PE, const Real G_CI, const Real x_e_init, const int maxiter);
 //CO abundance. Fit from Gong, Ostriker and Wolfire 2017
 //Note: This is only tested in the case Z_d = Z_g
 Real fCO(const Real x_H2, const Real x_Cplus, const Real nH, 
@@ -660,51 +660,54 @@ Real fions(const Real x_e, const Real x_H2, const Real nH, const Real T,
 
 Real fe(const Real x_H2, const Real nH, const Real T,
         const Real Z_d, const Real Z_g, const Real xi_CR, 
-        const Real G_PE, const Real G_CI) { 
+        const Real G_PE, const Real G_CI, const Real x_e_init, const int maxiter) { 
+
   const Real rtol = 1e-3;
   const Real small_x = 1e-6;
   const Real small_f = 1e-20;
-  const int maxiter = 200;
-  Real x = 0;
-  Real f = 0;
-  Real xnew = 0;
-  Real fnew = 0;
+
   int niter = 0;
-  Real xprev = 0.5;
-  Real fprev = 0;
+  Real x = 0;
+  Real xprev = x_e_init;
+  Real xnew = 0;
+  Real dx = 0;
+  Real dxprev = 0;
+  Real dxnew = 0;
   Real a = 0.0;
-  Real fa = 0.0;
+  Real dxa = 0.0;
   Real b = 1.0;
   bool flag = true;
+  
   niter = 0;
-  fprev = fions(xprev, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI) - xprev;
+  dxprev = fions(xprev, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI) - xprev;
   while (1) {
     x = fions(xprev, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI);
-    if ( fabs((x-xprev)/(xprev+small_x)) < rtol || fabs(fprev) < small_x || 
+    if ( fabs((x-xprev)/(xprev+small_x)) < rtol || fabs(dxprev) < small_x || 
          fabs((a-b)/(b+small_x)) < rtol) {
       break;
     }
     if (niter > maxiter) {
       printf("fe(): WARNING: niter>maxiter(=%d), x=%.2e, xprev=%.2e\n", 
              maxiter, x, xprev);
-      printf("a=%.2e, b=%.2e\n", a, b);
+      printf("nH %.2e T %.2e x_H2 %.2e G_PE %.2e G_CI %.2e a=%.2e, b=%.2e\n",
+             nH, T, x_H2, G_PE, G_CI, a, b);
       //TODO: throw ath_error
       break;
     }
-    f = fions(x, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI) - x;
-    if ( fabs(f - fprev) < small_f ) {
+    dx = fions(x, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI) - x;
+    if ( fabs(dx - dxprev) < small_f ) {
       xnew = (x + xprev)/2.;
     } else {
-      xnew = x - f * (x-xprev)/(f-fprev);
+      xnew = x - dx * (x-xprev)/(dx-dxprev);
     }
     if (xnew < a || xnew > b) {
       xnew = (a + b)/2.;
     }
     if (flag) {
-      fa = fions(a, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)-a;
+      dxa = fions(a, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI) - a;
     }
-    fnew = fions(xnew, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)-xnew;
-    if (fa * fnew < 0.0) {
+    dxnew = fions(xnew, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)-xnew;
+    if (dxa * dxnew < 0.0) {
       b = xnew;
       flag = false;
     } else {
@@ -712,10 +715,11 @@ Real fe(const Real x_H2, const Real nH, const Real T,
       flag = true;
     }
     xprev = xnew;
-    fprev = fnew;
+    dxprev = dxnew;
     niter = niter + 1;
   }
   return xprev;
+
 }
 
 Real fCO(const Real x_H2, const Real x_Cplus, const Real nH, 
@@ -1092,20 +1096,19 @@ void get_abundances_fast(const Real nH, const Real T, const Real dvdr, const Rea
 			 Real *px_e, Real *px_HI, Real *px_H2, Real *px_Cplus,
 			 Real *px_CI, Real *px_CO, Real *px_OI) {
 
-  Real x_e, x_e_approx, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
-  
+  Real x_e_init, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
+
   x_H2 = fH2(nH, T, Z, xi_CR, G_H2);
-  x_e_approx = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE);
-  x_Cplus = fCplus(x_e_approx, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
-  x_Hplus = fHplus(x_e_approx, x_H2, x_Cplus, nH, T, Z, xi_CR, G_PE);
-  x_e = x_Cplus + x_Hplus;
-  x_Cplus = fCplus(x_e, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_Hplus = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE);
+  x_Cplus = fCplus(x_Hplus, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_Hplus = fHplus(x_Hplus + x_Cplus, x_Cplus, x_H2, nH, T, Z, xi_CR, G_PE);
+  
   x_CO = fCO(x_H2, x_Cplus, nH, Z, Z, xi_CR, G_CO);
   x_HI = MAX(1. - 2.0*x_H2 - x_Hplus, 0.);
   x_CI = MAX(xCstd*Z - x_CO - x_Cplus, 0.);
   x_OI = MAX(xOstd*Z - x_CO, 0.);
   
-  *px_e = x_e;
+  *px_e = x_Cplus + x_Hplus;
   *px_HI = x_HI;
   *px_H2 = x_H2;
   *px_Cplus=x_Cplus;
@@ -1118,12 +1121,15 @@ void get_abundances_fast(const Real nH, const Real T, const Real dvdr, const Rea
 
 void get_abundances(const Real nH, const Real T, const Real dvdr, const Real Z,
                     const Real xi_CR, const Real G_PE, const Real G_CI,
-                    const Real G_CO, const Real G_H2,
+                    const Real G_CO, const Real G_H2, const Real x_e_init,
+                    const int maxiter,
                     Real *px_e, Real *px_HI, Real *px_H2, Real *px_Cplus,
                     Real *px_CI, Real *px_CO, Real *px_OI) {
+  
   Real x_e, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
+  
   x_H2 = fH2(nH, T, Z, xi_CR, G_H2);
-  x_e = fe(x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_e = fe(x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI, x_e_init, maxiter);
   x_Cplus = fCplus(x_e, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
   x_Hplus = fHplus(x_e, x_H2, x_Cplus, nH, T, Z, xi_CR, G_PE);
   x_CO = fCO(x_H2, x_Cplus, nH, Z, Z, xi_CR, G_CO);

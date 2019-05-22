@@ -7,7 +7,7 @@ https://bitbucket.org/krumholz/dusty_resolution_tests
 
 # List of routines provided
 __all__ = [ # From cool_tigress.c
-           'fH2', 'fCplus', 'fHplus', 'fions', 'fe', 'fCO',
+           'fH2', 'fCplus', 'fHplus', 'fHplus_ng', 'fions', 'fe', 'fCO',
            'heatingCR', 'heatingH2pump', 'heatingPE',
            'coolingLya', 'coolingOI', 'coolingCII', 'coolingCI',
            'coolingCO', 'coolingRec', 'coolingHot',
@@ -95,6 +95,10 @@ def loadlib(path=None):
     __libptr.fHplus.argtypes = [c_double, c_double, c_double, c_double,
                                 c_double, c_double, c_double, c_double]
 
+    __libptr.fHplus_ng.restype = c_double
+    __libptr.fHplus_ng.argtypes = [c_double, c_double, c_double, c_double,
+                                   c_double, c_double]
+        
     __libptr.fCplus.restype = c_double
     __libptr.fCplus.argtypes = [c_double, c_double, c_double, c_double,
                                 c_double, c_double, c_double, c_double,
@@ -108,7 +112,7 @@ def loadlib(path=None):
     __libptr.fe.restype = c_double
     __libptr.fe.argtypes = [c_double, c_double, c_double, c_double,
                             c_double, c_double, c_double, c_double,
-                            c_double]
+                            c_double, c_int]
 
     __libptr.fCO.restype = c_double
     __libptr.fCO.argtypes = [c_double, c_double, c_double, c_double,
@@ -166,7 +170,7 @@ def loadlib(path=None):
     __libptr.get_abundances.argtypes = \
         [c_double, c_double, c_double, c_double,
          c_double, c_double, c_double, c_double,
-         c_double,
+         c_double, c_double, c_int,
          LP_c_double, LP_c_double,
          LP_c_double, LP_c_double,
          LP_c_double, LP_c_double,
@@ -253,6 +257,13 @@ def fHplus(x_e, x_Cplus, x_H2, nH, T, Z_d, xi_CR, G_PE):
     loadlib()
     return __libptr.fHplus(x_e, x_Cplus, x_H2, nH, T, Z_d, xi_CR, G_PE)
 
+@np.vectorize
+def fHplus_ng(x_H2, nH, T, Z_d, xi_CR, G_PE):
+    """
+    Compute equilibrium x_H+ (without grain assisted recombination)
+    """
+    loadlib()
+    return __libptr.fHplus_ng(x_H2, nH, T, Z_d, xi_CR, G_PE)
 
 @np.vectorize
 def fions(x_e, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI):
@@ -262,14 +273,13 @@ def fions(x_e, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI):
     loadlib()
     return __libptr.fions(x_e, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)
 
-
 @np.vectorize
-def fe(x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI):
+def fe(x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI, x_e_init, maxiter):
     """
     Compute equilibrium x_e
     """
     loadlib()
-    return __libptr.fions(x_H2, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)
+    return __libptr.fe(x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI, x_e_init, maxiter)
 
 
 @np.vectorize
@@ -371,7 +381,8 @@ def coolingHot(T, Z_g):
     return __libptr.coolingHot(T, Z_g)
 
 
-def get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2):
+def get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
+                   x_e_init, maxiter):
     """
     Compute equilibrium abundances
     """
@@ -384,6 +395,7 @@ def get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2):
     x_CO = c_double()
     x_OI = c_double()
     __libptr.get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
+                            x_e_init, maxiter,
                             byref(x_e), byref(x_HI), byref(x_H2),
                             byref(x_Cplus), byref(x_CI),
                             byref(x_CO), byref(x_OI))
@@ -392,7 +404,7 @@ def get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2):
                      x_CI.value, x_CO.value, x_OI.value], dtype=np.float64)
 
 get_abundances = np.vectorize(get_abundances, otypes=[np.ndarray],
-                              signature='(),(),(),(),(),(),(),(),()->(i)')
+                              signature='(),(),(),(),(),(),(),(),(),(),()->(i)')
 
 def get_abundances_fast(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2):
     """
@@ -559,7 +571,8 @@ class CoolTigress(object):
 
     def __init__(self, nH=1.0, T=1e2,
                  Z=1.0, xi_CR=2.0e-16, dvdr=9.0e-14,
-                 G_PE=1.0, G_CI=1.0, G_CO=1.0, G_H2=0.0, equil=False,
+                 G_PE=1.0, G_CI=1.0, G_CO=1.0, G_H2=1.0, equil=False,
+                 x_e_init=0.5, maxiter=200,
                  fast_flag=True):
 
         self.nH = nH
@@ -576,6 +589,9 @@ class CoolTigress(object):
         self.fast_flag = fast_flag
         self._set_par()
 
+        self.x_e_init = x_e_init
+        self.maxiter = maxiter
+        
         if equil:
             self.get_nHeq()
 
@@ -684,7 +700,8 @@ class CoolTigress(object):
         for T_ in np.flip(self.T):
             nHeq_ = CoolTigress._get_nHeq(
                 nHeq_, T_, self.dvdr, self.Z, self.xi_CR,
-                self.G_PE, self.G_CI, self.G_CO, self.G_H2, self.fast_flag,
+                self.G_PE, self.G_CI, self.G_CO, self.G_H2,
+                self.x_e_init, self.maxiter, self.fast_flag,
                 tol=tol)
             nHeq.append(nHeq_)
 
@@ -692,15 +709,14 @@ class CoolTigress(object):
 
     @staticmethod
     @np.vectorize
-    def _get_nHeq(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2, fast_flag,
-                  tol=1e-4, verbose=False):
+    def _get_nHeq(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2, 
+                  x_e_init, maxiter, fast_flag, tol=1e-4, verbose=False):
         """
         Given gas temperature and other parameters, compute nH for which
         heating is equal to cooling
         """
 
         from scipy import optimize
-
         if fast_flag:
             def f(nH):
                 x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI = \
@@ -710,13 +726,13 @@ class CoolTigress(object):
                                    nH, T, Z, xi_CR, G_PE, G_H2)
                 cool = get_cooling(x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI,
                                    nH, T, dvdr, Z, G_PE)
-
+                
                 return np.abs((cool - heat)/(heat + cool))
         else:
             def f(nH):
                 x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI = \
-                    get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2)
-
+                    get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
+                                   x_e_init, maxiter)
                 heat = get_heating(x_e, x_HI, x_H2,
                                    nH, T, Z, xi_CR, G_PE, G_H2)
                 cool = get_cooling(x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI,
@@ -724,7 +740,6 @@ class CoolTigress(object):
 
                 return np.abs((cool - heat)/(heat + cool))
 
-            
         xmin, fval, it, funcalls = optimize.brent(f, tol=tol, full_output=True)
         if fval > tol:
             # if verbose:
@@ -738,7 +753,8 @@ class CoolTigress(object):
 
         # Should match in order and name input parameters of wrapper functions
         self.par['get_abundances'] = ['nH', 'T', 'dvdr', 'Z', 'xi_CR',
-                                      'G_PE', 'G_CI', 'G_CO', 'G_H2']
+                                      'G_PE', 'G_CI', 'G_CO', 'G_H2',
+                                      'x_e_init', 'maxiter']
         self.par['get_abundances_fast'] = ['nH', 'T', 'dvdr', 'Z', 'xi_CR',
                                            'G_PE', 'G_CI', 'G_CO', 'G_H2']
         self.par['get_heating'] = ['x_e', 'x_HI', 'x_H2',
