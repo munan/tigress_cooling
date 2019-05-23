@@ -1096,7 +1096,7 @@ void get_abundances_fast(const Real nH, const Real T, const Real dvdr, const Rea
 			 Real *px_e, Real *px_HI, Real *px_H2, Real *px_Cplus,
 			 Real *px_CI, Real *px_CO, Real *px_OI) {
 
-  Real x_e_init, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
+  Real x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
 
   x_H2 = fH2(nH, T, Z, xi_CR, G_H2);
   x_Hplus = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE);
