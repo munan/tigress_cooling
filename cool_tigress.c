@@ -547,7 +547,6 @@ Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
 Real fHplus_ng(const Real x_H2,
                const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
                const Real G_PE) {
-  const Real small_ = 1e-50;
   Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow( 
                1.0 + pow( 115188.0 / T, 0.407) , -2.242 );
   Real x_H_cr = 1. - 2. * x_H2;
