@@ -538,7 +538,7 @@ Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
           *lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe
                        );
   }
-  Real c = k_cr_H * x_H + k_coll*x_e*nH;
+  Real c = k_cr_H * x_H + k_coll*x_e*x_H*nH;
   Real x_Hplus = c/( nH*(k_Hplus_e *  x_e + k_Hplus_gr) );
   x_Hplus = MIN(x_Hplus, 1.0);
   return x_Hplus;
