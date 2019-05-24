@@ -567,6 +567,7 @@ Real fHplus_ng(const Real x_H2,
   Real b = k_cr_H - (1.-2.*x_H2)*nH*k_coll;
   Real c = -(1.-2.*x_H2)*k_cr_H;
   Real x_Hplus = (-b + sqrt(b*b-4.*a*c))/(2.*a);
+  x_Hplus = MIN(x_Hplus, 1.0);
   return x_Hplus;
 }
 
@@ -1017,7 +1018,7 @@ void get_abundances(bool flag_fast,
   Real x_e, x_e_approx, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
   x_H2 = fH2(nH, T, Z, xi_CR, G_H2);
   if (flag_fast) {
-    x_e_approx = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE);
+    x_e_approx = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE) + xCstd*Z;
     x_Cplus = fCplus(x_e_approx, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
     x_Hplus = fHplus(x_e_approx, x_H2, x_Cplus, nH, T, Z, xi_CR, G_PE);
     x_e = x_Cplus + x_Hplus;
