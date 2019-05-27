@@ -61,6 +61,7 @@
  * fCplus(x_e, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)
  * fHplus(x_e, x_H2, x_Cplus, nH, T, Z_d, xi_CR, G_PE)
  * fHplus_ng(x_H2, nH, T, Z_d, xi_CR, G_PE)
+ * fHplus_gr(x_e, x_H2, nH, T, Z_d, xi_CR, G_PE)
  * fe_e(x_e, x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)
  * fe(x_H2, nH, T, Z_d, Z_g, xi_CR, G_PE, G_CI)
  * fCO(x_H2, x_Cplus, nH, Z_d, Z_g, xi_CR, G_CO)
@@ -461,11 +462,16 @@ Real fCplus(const Real x_e, const Real x_H2, const Real nH, const Real T,
 Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
                    const Real nH, const Real T, const Real Z_d, const Real xi_CR,
                    const Real G_PE);
+//H+ abundance with grain assisted recombination (use x_e),
+//depending on abundances of H2, ignoring electron contribution of C+
+Real fHplus_gr(const Real x_e, const Real x_H2,
+               const Real nH, const Real T, const Real Z_d, const Real xi_CR,
+               const Real G_PE);
 //H+ abundance without grain assisted recombination,
 //depending on abundances of H2, ignoring electron contribution of C+
 Real fHplus_ng(const Real x_H2,
-	       const Real nH, const Real T, const Real Z_d, const Real xi_CR,
-	       const Real G_PE);
+               const Real nH, const Real T, const Real Z_d, const Real xi_CR,
+               const Real G_PE);
 //ion abundances: ion = C+ + H+, depending on e- and H2 abundances.
 Real fions(const Real x_e, const Real x_H2, const Real nH, const Real T,
 	   const Real Z_d, const Real Z_g, const Real xi_CR, 
@@ -555,12 +561,35 @@ void get_linecool_all(const Real T, const Real ne,
 
 Real fH2(const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
          const Real G_H2) {
+  const Real temp_coll_ = 7.0e2;
+  Real logT, logT4, k9l_, k9h_, k10l_, k10h_, ncrH2_, ncr, n2ncr, k_H2_H, k_H2_H2; 
+  if (T > temp_coll_) {
+    /*(15) H2 + *H -> 3 *H   
+     *(16) H2 + H2 -> H2 + 2 *H
+     * --(9) Density dependent. See Glover+MacLow2007*/
+    logT = log10(T);
+	  logT4 = log10(T/1.0e4);
+  	k9l_ = 6.67e-12 * sqrt(T) * exp(-(1. + 63590./T)); 
+    k9h_ = 3.52e-9 * exp(-43900.0 / T);
+    k10l_ = 5.996e-30 * pow(T, 4.1881) / pow((1.0 + 6.761e-6 * T), 5.6881)  
+            * exp(-54657.4 / T);
+    k10h_ = 1.3e-9 * exp(-53300.0 / T); 
+    ncrH2_ = pow(10, (4.845 - 1.3 * logT4 + 1.62 * logT4*logT4));
+    ncr = 2.*ncrH2_ ;
+    n2ncr = nH / ncr;
+    k_H2_H = pow(10, log10(k9h_) *  n2ncr/(1. + n2ncr) 
+                         + log10(k9l_) / (1. + n2ncr)) * nH;
+    k_H2_H2 = pow(10, log10(k10h_) *  n2ncr/(1. + n2ncr) 
+                         + log10(k10l_) / (1. + n2ncr)) * nH;
+  } else {
+    k_H2_H = 0.;
+    k_H2_H2 = 0.;
+  }
   Real kgr = 3.0e-17*Z_d;
-  Real R = kgr * nH / (2. * xi_CR);
-  Real a = 1.65*0.7;
-  Real c = R;
+  Real a = 2.31*xi_CR + 2*nH*k_H2_H - nH*k_H2_H2;
+  Real c = nH * kgr;
   Real k_FUV = 5.7e-11 * G_H2;
-  Real b = - (1.65*1.5 + 2.*R + k_FUV/(2.*xi_CR));
+  Real b = - (4.95*xi_CR + 2*nH*kgr + k_FUV + nH*k_H2_H);
   Real x_H2 = (-b - sqrt(b*b - 4*a*c) )/(2.*a);
   return x_H2;
 }
@@ -598,36 +627,75 @@ Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
   Real x_H = 1. - 2. * x_H2 - (x_e - x_Cplus);
   x_H = MAX(x_H, 0.0);
   Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow( 
-							     1.0 + pow( 115188.0 / T, 0.407) , -2.242 );
+               1.0 + pow( 115188.0 / T, 0.407) , -2.242 );
   const Real cHp_[7] = {12.25, 8.074e-6, 1.378, 5.087e2,
-			1.586e-2, 0.4723, 1.102e-5};
+                               1.586e-2, 0.4723, 1.102e-5};
   Real psi_gr = 1.7 * G_PE * sqrt(T)/(nH * x_e + small_) + small_;
   Real k_Hplus_gr = 1.0e-14 * cHp_[0] / 
-    (
-     1.0 + cHp_[1]*pow(psi_gr, cHp_[2]) * 
-     (1.0 + cHp_[3] * pow(T, cHp_[4])
-      *pow( psi_gr, -cHp_[5]-cHp_[6]*log(T) ) 
-      ) 
-     ) * Z_d;
+             (
+               1.0 + cHp_[1]*pow(psi_gr, cHp_[2]) * 
+                 (1.0 + cHp_[3] * pow(T, cHp_[4])
+                               *pow( psi_gr, -cHp_[5]-cHp_[6]*log(T) ) 
+                 ) 
+              ) * Z_d;
   Real k_cr_H = xi_CR * (2.3*x_H2 + 1.5*x_H);
   Real k_coll = 0;
   Real lnTe = log(T * 8.6173e-5);
   const Real T_coll = 7.0e2;
   if (T > T_coll) {
-    k_coll = exp(-3.271396786e1 + (1.35365560e1 + (- 5.73932875 + (1.56315498 + (- 2.877056e-1 +
-	(3.48255977e-2 + (- 2.63197617e-3 + (1.11954395e-4 + (-2.03914985e-6)
-					     *lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe);
+    k_coll = exp( -3.271396786e1 + 
+                        (1.35365560e1 + (- 5.73932875 + (1.56315498 
+                      + (- 2.877056e-1 + (3.48255977e-2 + (- 2.63197617e-3
+                      + (1.11954395e-4 + (-2.03914985e-6)
+          *lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe
+                       );
   }
-  Real c = k_cr_H * x_H + k_coll*x_e*nH;
-  Real x_Hplus = c/( nH*(k_Hplus_e * x_e + k_Hplus_gr) );
+  Real c = k_cr_H * x_H + k_coll*x_e*x_H*nH;
+  Real x_Hplus = c/( nH*(k_Hplus_e *  x_e + k_Hplus_gr) );
+  x_Hplus = MIN(x_Hplus, 1.0);
+  return x_Hplus;
+}
+
+Real fHplus_gr(const Real x_e, const Real x_H2,
+               const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
+               const Real G_PE) {
+  const Real small_ = 1e-50;
+  Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow( 
+               1.0 + pow( 115188.0 / T, 0.407) , -2.242 );
+  const Real cHp_[7] = {12.25, 8.074e-6, 1.378, 5.087e2,
+                               1.586e-2, 0.4723, 1.102e-5};
+  Real psi_gr = 1.7 * G_PE * sqrt(T)/(nH * x_e + small_) + small_;
+  Real k_Hplus_gr = 1.0e-14 * cHp_[0] / 
+             (
+               1.0 + cHp_[1]*pow(psi_gr, cHp_[2]) * 
+                 (1.0 + cHp_[3] * pow(T, cHp_[4])
+                               *pow( psi_gr, -cHp_[5]-cHp_[6]*log(T) ) 
+                 ) 
+              ) * Z_d;
+  Real k_cr1 = xi_CR * (1.5 - 0.7*x_H2);
+  Real k_coll = 0;
+  Real lnTe = log(T * 8.6173e-5);
+  const Real T_coll = 7.0e2;
+  if (T > T_coll) {
+    k_coll = exp( -3.271396786e1 + 
+                        (1.35365560e1 + (- 5.73932875 + (1.56315498 
+                      + (- 2.877056e-1 + (3.48255977e-2 + (- 2.63197617e-3
+                      + (1.11954395e-4 + (-2.03914985e-6)
+          *lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe
+                       );
+  }
+  Real a = nH * (k_Hplus_e + k_coll) - 1.5*xi_CR;
+  Real b = k_cr1 - (1.-2.*x_H2)*nH*k_coll + nH*k_Hplus_gr + (1.-2.*x_H2)*1.5*xi_CR;
+  Real c = -(1.-2.*x_H2)*k_cr1;
+  Real x_Hplus = (-b + sqrt(b*b-4.*a*c))/(2.*a);
   x_Hplus = MIN(x_Hplus, 1.0);
   return x_Hplus;
 }
 
 Real fHplus_ng(const Real x_H2,
-               const Real nH, const Real T, const Real Z_d, const Real xi_CR,
+               const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
                const Real G_PE) {
-  Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow(
+  Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow( 
                1.0 + pow( 115188.0 / T, 0.407) , -2.242 );
   Real x_H_cr = 1. - 2. * x_H2;
   x_H_cr = MAX(x_H_cr, 0.0);
@@ -636,8 +704,8 @@ Real fHplus_ng(const Real x_H2,
   Real lnTe = log(T * 8.6173e-5);
   const Real T_coll = 7.0e2;
   if (T > T_coll) {
-    k_coll = exp( -3.271396786e1 +
-                        (1.35365560e1 + (- 5.73932875 + (1.56315498
+    k_coll = exp( -3.271396786e1 + 
+                        (1.35365560e1 + (- 5.73932875 + (1.56315498 
                       + (- 2.877056e-1 + (3.48255977e-2 + (- 2.63197617e-3
                       + (1.11954395e-4 + (-2.03914985e-6)
           *lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe
@@ -647,6 +715,7 @@ Real fHplus_ng(const Real x_H2,
   Real b = k_cr_H - (1.-2.*x_H2)*nH*k_coll;
   Real c = -(1.-2.*x_H2)*k_cr_H;
   Real x_Hplus = (-b + sqrt(b*b-4.*a*c))/(2.*a);
+  x_Hplus = MIN(x_Hplus, 1.0);
   return x_Hplus;
 }
 
@@ -1096,12 +1165,11 @@ void get_abundances_fast(const Real nH, const Real T, const Real dvdr, const Rea
 			 Real *px_e, Real *px_HI, Real *px_H2, Real *px_Cplus,
 			 Real *px_CI, Real *px_CO, Real *px_OI) {
 
-  Real x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
-
+  Real x_e_approx, x_HI, x_H2, x_Hplus, x_Cplus, x_CI, x_CO, x_OI;
   x_H2 = fH2(nH, T, Z, xi_CR, G_H2);
-  x_Hplus = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE);
-  x_Cplus = fCplus(x_Hplus, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
-  x_Hplus = fHplus(x_Hplus + x_Cplus, x_Cplus, x_H2, nH, T, Z, xi_CR, G_PE);
+  x_e_approx = fHplus_ng(x_H2, nH, T, Z, xi_CR, G_PE) + xCstd*Z;
+  x_Cplus = fCplus(x_e_approx, x_H2, nH, T, Z, Z, xi_CR, G_PE, G_CI);
+  x_Hplus = fHplus_gr(x_e_approx, x_H2, nH, T, Z, xi_CR, G_PE);
   
   x_CO = fCO(x_H2, x_Cplus, nH, Z, Z, xi_CR, G_CO);
   x_HI = MAX(1. - 2.0*x_H2 - x_Hplus, 0.);

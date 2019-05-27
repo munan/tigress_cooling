@@ -7,7 +7,8 @@ https://bitbucket.org/krumholz/dusty_resolution_tests
 
 # List of routines provided
 __all__ = [ # From cool_tigress.c
-           'fH2', 'fCplus', 'fHplus', 'fHplus_ng', 'fions', 'fe', 'fCO',
+           'fH2', 'fCplus', 'fHplus', 'fHplus_gr', 'fHplus_ng',
+           'fions', 'fe', 'fCO',
            'heatingCR', 'heatingH2pump', 'heatingPE',
            'coolingLya', 'coolingOI', 'coolingCII', 'coolingCI',
            'coolingCO', 'coolingRec', 'coolingHot',
@@ -26,11 +27,13 @@ __all__ = [ # From cool_tigress.c
 
 # Imports
 import os
+import os.path as osp
 import numpy as np
 import numpy.ctypeslib as npct
 from ctypes import c_double, c_int, c_uint8, \
     POINTER, byref # Structure, pointer, c_bool
 import astropy.constants as ac
+import pickle
 
 # Import other objects here...(temporary)
 from species_enum import EnumAtom, EnumLineCoolElem, EnumLineCoolTransition
@@ -94,6 +97,10 @@ def loadlib(path=None):
     __libptr.fHplus.restype = c_double
     __libptr.fHplus.argtypes = [c_double, c_double, c_double, c_double,
                                 c_double, c_double, c_double, c_double]
+
+    __libptr.fHplus_gr.restype = c_double
+    __libptr.fHplus_gr.argtypes = [c_double, c_double, c_double, c_double,
+                                   c_double, c_double, c_double]
 
     __libptr.fHplus_ng.restype = c_double
     __libptr.fHplus_ng.argtypes = [c_double, c_double, c_double, c_double,
@@ -256,6 +263,15 @@ def fHplus(x_e, x_Cplus, x_H2, nH, T, Z_d, xi_CR, G_PE):
     """
     loadlib()
     return __libptr.fHplus(x_e, x_Cplus, x_H2, nH, T, Z_d, xi_CR, G_PE)
+
+@np.vectorize
+def fHplus_gr(x_e, x_H2, nH, T, Z_d, xi_CR, G_PE):
+    """
+    Compute equilibrium x_H+ with grain recombination 
+    (ignores contribution of C+)
+    """
+    loadlib()
+    return __libptr.fHplus_gr(x_e, x_H2, nH, T, Z_d, xi_CR, G_PE)
 
 @np.vectorize
 def fHplus_ng(x_H2, nH, T, Z_d, xi_CR, G_PE):
@@ -573,7 +589,7 @@ class CoolTigress(object):
                  Z=1.0, xi_CR=2.0e-16, dvdr=9.0e-14,
                  G_PE=1.0, G_CI=1.0, G_CO=1.0, G_H2=1.0, equil=False,
                  x_e_init=0.5, maxiter=200,
-                 fast_flag=True):
+                 fast_flag=True, load_from_pickle=False):
 
         self.nH = nH
         self.T = T
@@ -692,7 +708,7 @@ class CoolTigress(object):
         self.coolingHot = coolingHot(*par)
         return self.coolingHot
 
-    def get_nHeq(self, tol=1e-4):
+    def get_nHeq(self, tol=2e-3):
         nHeq = []
         # Should we start from high T and low nHeq?
         # Doesn't seem to matter though...
@@ -707,6 +723,41 @@ class CoolTigress(object):
 
         self.nH = np.flip(np.array(nHeq))
 
+    def save(self, savdir=None, verbose=True):
+
+        if savdir is None:
+            savdir = osp.join(osp.dirname(__file__), 'pickle')
+        if not osp.isdir(savdir):
+            os.makedirs(savdir)
+        fpkl = osp.join(savdir, 'cool_equil_xi{0:.1e}_GPE{1:.1g}_Z{2:.1g}'.\
+                        format(self.xi_CR, self.G_PE, self.Z))
+        if self.fast_flag:
+            fpkl += '_fast'
+        self.fpkl = fpkl + '.p'
+
+        res = dict()
+        for k in self.__dict__.keys():
+            res[k] = getattr(self, k)
+       
+        pickle.dump(res, open(self.fpkl, 'wb'))
+        if verbose:
+            print('pickled to ', self.fpkl)
+            
+    def load(self, savdir=None):
+
+        if savdir is None:
+            savdir = osp.join(osp.dirname(__file__), 'pickle')
+        if not osp.isdir(savdir):
+            os.makedirs(savdir)
+        fpkl = osp.join(savdir, 'cool_equil_xi{0:.1e}_GPE{1:.1g}_Z{2:.1g}'.\
+                        format(self.xi_CR, self.G_PE, self.Z))
+        if self.fast_flag:
+            fpkl += '_fast'
+        self.fpkl = fpkl + '.p'
+
+        res = pickle.load(open(self.fpkl, 'rb'))
+        return res        
+            
     @staticmethod
     @np.vectorize
     def _get_nHeq(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2, 
@@ -715,10 +766,12 @@ class CoolTigress(object):
         Given gas temperature and other parameters, compute nH for which
         heating is equal to cooling
         """
-
+        
+        # lognH = np.log10(nH)
         from scipy import optimize
         if fast_flag:
             def f(nH):
+                # nH = 10.0**lognH
                 x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI = \
                     get_abundances_fast(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2)
 
@@ -728,8 +781,11 @@ class CoolTigress(object):
                                    nH, T, dvdr, Z, G_PE)
                 
                 return np.abs((cool - heat)/(heat + cool))
+                # return (cool - heat)**2/(heat + cool)**2
+
         else:
             def f(nH):
+                # nH = 10.0**lognH
                 x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI = \
                     get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,
                                    x_e_init, maxiter)
@@ -737,16 +793,22 @@ class CoolTigress(object):
                                    nH, T, Z, xi_CR, G_PE, G_H2)
                 cool = get_cooling(x_e, x_HI, x_H2, x_Cplus, x_CI, x_CO, x_OI,
                                    nH, T, dvdr, Z, G_PE)
-
+                
                 return np.abs((cool - heat)/(heat + cool))
+                #return (cool - heat)**2/(heat + cool)**2
 
-        xmin, fval, it, funcalls = optimize.brent(f, tol=tol, full_output=True)
+        nHeq, fval, it, funcalls = optimize.brent(f, tol=tol,
+                                                  full_output=True)
+        # nHeq = 10.0**xmin
         if fval > tol:
             # if verbose:
             #    print('xmin,fval,iter,funcalls',xmin, fval, it, funcalls)
             return np.nan
         else:
-            return xmin
+            return nHeq
+
+
+        return nHeq
 
     def _set_par(self):
         self.par = dict()
