@@ -11,7 +11,8 @@ __all__ = [ # From cool_tigress.c
            'fions', 'fe', 'fCO',
            'heatingCR', 'heatingH2pump', 'heatingPE',
            'coolingLya', 'coolingOI', 'coolingCII', 'coolingCI',
-           'coolingCO', 'coolingRec', 'coolingHot',
+           'coolingCO', 'coolingRec',
+           'coolingHot', 'coolingHotHHe', 'coolingHotMetal',
            'get_abundances', 'get_abundances_fast',
            'get_heating', 'get_cooling',
            'CII_rec_rate_', 'q10CII_', 'cooling2Level_', 'cooling3Level_',
@@ -163,6 +164,12 @@ def loadlib(path=None):
     __libptr.coolingHot.restype = c_double
     __libptr.coolingHot.argtypes = [c_double, c_double]
 
+    __libptr.coolingHotHHe.restype = c_double
+    __libptr.coolingHotHHe.argtypes = [c_double]
+
+    __libptr.coolingHotMetal.restype = c_double
+    __libptr.coolingHotMetal.argtypes = [c_double, c_double]
+        
     __libptr.get_cooling.restype = c_double
     __libptr.get_cooling.argtypes = [c_double, c_double, c_double, c_double,
                                      c_double, c_double, c_double, c_double,
@@ -391,10 +398,26 @@ def coolingRec(x_e, nH, T, Z_d, G_PE):
 @np.vectorize
 def coolingHot(T, Z_g):
     """
-    Compute cooling rate per H by recombination of e on PAHs [erg s^-1 H^-1]
+    Compute cooling rate per H by hot gas [erg s^-1 H^-1]
     """
     loadlib()
     return __libptr.coolingHot(T, Z_g)
+
+@np.vectorize
+def coolingHotHHe(T):
+    """
+    Compute cooling rate per H by hot gas (H and He only) [erg s^-1 H^-1]
+    """
+    loadlib()
+    return __libptr.coolingHotHHe(T)
+
+@np.vectorize
+def coolingHotMetal(T, Z_g):
+    """
+    Compute cooling rate per H by hot gas (metal only) [erg s^-1 H^-1]
+    """
+    loadlib()
+    return __libptr.coolingHotMetal(T, Z_g)
 
 
 def get_abundances(nH, T, dvdr, Z, xi_CR, G_PE, G_CI, G_CO, G_H2,

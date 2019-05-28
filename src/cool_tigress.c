@@ -1239,6 +1239,22 @@ Real coolingHot(const Real T, const Real Z_g) {
   return (L_HHe + L_metal);
 }
 
+Real coolingHotHHe(const Real T) {
+  const Real log10T = log10(T);
+  const int iT =  linearInterpIndex_(len_hot_, log10T_hot_, log10T);
+  const Real log10L_HHe = LP1Di_(log10T_hot_, log10L_hot_HHe_, iT, log10T);
+  return pow(10, log10L_HHe);
+}
+
+Real coolingHotMetal(const Real T, const Real Z_g) {
+  const Real log10T = log10(T);
+  const int iT =  linearInterpIndex_(len_hot_, log10T_hot_, log10T);
+  const Real log10L_metal = LP1Di_(log10T_hot_, log10L_hot_metal_, iT, log10T);
+  return pow(10, log10L_metal) * Z_g;
+}
+
+#undef len_hot_
+
 void get_abundances_fast(const Real nH, const Real T, const Real dvdr, const Real Z,
 			 const Real xi_CR, const Real G_PE, const Real G_CI,
 			 const Real G_CO, const Real G_H2,
