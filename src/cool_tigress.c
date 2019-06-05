@@ -1609,10 +1609,10 @@ Real get_cooling(const Real x_e, const Real x_HI, const Real x_H2,
 		 const Real x_OI, const Real nH, const Real T, const Real dvdr,
 		 const Real Z, const Real G_PE) {
   const Real log10T = log10(T);
-  const Real log10T_cold = 3.9542425094393248; // 9000 K
-  const Real log10T_hot = 4.1;
+  const Real log10T_cold = 4.0; // 10000 K
+  const Real log10T_hot = 4.146128035678238; // 14000 K
   Real c_Lya, c_OI, c_CII, c_CI, c_CO, c_Rec, c_cold, c_hot;
-  Real log10L;
+  Real log10L, frac;
   if (log10T > log10T_hot) {
     return coolingHot(T, Z);
   } else if (log10T > log10T_cold) {
@@ -1622,14 +1622,12 @@ Real get_cooling(const Real x_e, const Real x_HI, const Real x_H2,
     c_CI = coolingCI(x_e, x_CI, x_HI, x_H2, nH, T);
     c_CO = coolingCO(x_e, x_CO, x_HI, x_H2, nH, T, dvdr);
     c_Rec = coolingRec(x_e, nH, T, Z, G_PE);
-    c_Lya = coolingLya(x_e, x_HI, nH, T);
     c_cold = (c_Lya + c_OI + c_CII + c_CI + c_CO + c_Rec)/nH;
     c_hot = coolingHot(T, Z);
-    log10L = linearInterp_(0.0, 1.0,
-                           log10(c_cold), log10(c_hot),
-                           (log10T - log10T_cold)/(log10T_hot - log10T_cold));
+    frac = (log10T - log10T_cold)/(log10T_hot - log10T_cold);
+    log10L = linearInterp_(0.0, 1.0, log10(c_cold), log10(c_hot),
+                           frac*frac*frac);
     return pow(10, log10L);
-    
   } else {
     c_Lya = coolingLya(x_e, x_HI, nH, T);
     c_OI = coolingOI(x_e, x_OI, x_HI, x_H2, nH, T);
