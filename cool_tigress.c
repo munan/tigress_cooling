@@ -85,7 +85,6 @@
  * heating() and cooling().
  *
  * helper functions for cooling:
- * CII_rec_rate_()
  * q10CII_()
  * cooling2Level_()
  * cooling3Level_()
@@ -354,7 +353,6 @@ static const Real log10L_hot_metal_[len_hot_] = {
  -23.12567477, -23.11837572
 };
 
-
 /*----------------------------------------------------------------------------*/
 /* PRIVATE FUCNTIONS                                                          */
 /*----------------------------------------------------------------------------*/
@@ -429,7 +427,6 @@ static Real coolingRec(const Real x_e, const Real nH, const Real T,
 static Real coolingHot(const Real T, const Real Z_g);
 
 //helper functions for cooling-------------------------------------------------
-static Real CII_rec_rate_(const Real temp);
 static Real q10CII_(const Real nHI, const Real nH2, const Real ne, const Real T);
 static Real cooling2Level_(const Real q01, const Real q10, const Real A10,
                            const Real E10, const Real xs);
@@ -439,12 +436,12 @@ static Real cooling3Level_(const Real q01, const Real q10, const Real q02,
 													 const Real A10, const Real A20, const Real A21,
                            const Real E10, const Real E20, const Real E21,
 													 const Real xs);
-static int linearInterpIndex_(const int len, const Real xarr[], const Real x);
-static Real linearInterp_(const Real x0, const Real x1, const Real y0,
+inline int linearInterpIndex_(const int len, const Real xarr[], const Real x);
+inline Real linearInterp_(const Real x0, const Real x1, const Real y0,
                           const Real y1, const Real x);
-static Real LP1Di_(const Real *xarr, const Real *data, const int ix,
+inline Real LP1Di_(const Real *xarr, const Real *data, const int ix,
                    const Real x);
-static Real LP2Di_(const Real *xarr, const Real *yarr,
+inline Real LP2Di_(const Real *xarr, const Real *yarr,
                    const int lenx, const int ix, const int iy,
                    const Real *data, const Real x, const Real y);
 
@@ -455,35 +452,16 @@ static Real LP2Di_(const Real *xarr, const Real *yarr,
 
 Real fH2(const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
          const Real G_H2) {
-  const Real temp_coll_ = 7.0e2;
-  Real logT, logT4, k9l_, k9h_, k10l_, k10h_, ncrH2_, ncr, n2ncr, k_H2_H, k_H2_H2; 
+  const Real temp_coll_ = 3.0e3;
   if (T > temp_coll_) {
-    /*(15) H2 + *H -> 3 *H   
-     *(16) H2 + H2 -> H2 + 2 *H
-     * --(9) Density dependent. See Glover+MacLow2007*/
-    logT = log10(T);
-	  logT4 = log10(T/1.0e4);
-  	k9l_ = 6.67e-12 * sqrt(T) * exp(-(1. + 63590./T)); 
-    k9h_ = 3.52e-9 * exp(-43900.0 / T);
-    k10l_ = 5.996e-30 * pow(T, 4.1881) / pow((1.0 + 6.761e-6 * T), 5.6881)  
-            * exp(-54657.4 / T);
-    k10h_ = 1.3e-9 * exp(-53300.0 / T); 
-    ncrH2_ = pow(10, (4.845 - 1.3 * logT4 + 1.62 * logT4*logT4));
-    ncr = 2.*ncrH2_ ;
-    n2ncr = nH / ncr;
-    k_H2_H = pow(10, log10(k9h_) *  n2ncr/(1. + n2ncr) 
-                         + log10(k9l_) / (1. + n2ncr)) * nH;
-    k_H2_H2 = pow(10, log10(k10h_) *  n2ncr/(1. + n2ncr) 
-                         + log10(k10l_) / (1. + n2ncr)) * nH;
-  } else {
-    k_H2_H = 0.;
-    k_H2_H2 = 0.;
-  }
+    return 0.;
+  }   
+  Real xi_CR0 = MAX(xi_CR, 1e-20);
   Real kgr = 3.0e-17*Z_d;
-  Real a = 2.31*xi_CR + 2*nH*k_H2_H - nH*k_H2_H2;
+  Real a = 2.31*xi_CR0;
   Real c = nH * kgr;
   Real k_FUV = 5.7e-11 * G_H2;
-  Real b = - (4.95*xi_CR + 2*nH*kgr + k_FUV + nH*k_H2_H);
+  Real b = - (4.95*xi_CR0 + 2*nH*kgr + k_FUV);
   Real x_H2 = (-b - sqrt(b*b - 4*a*c) )/(2.*a);
   return x_H2;
 }
@@ -495,7 +473,14 @@ Real fCplus(const Real x_e, const Real x_H2, const Real nH, const Real T,
   const Real small_ = 1e-50;
   Real k_C_cr = 3.85 * xi_CR;
   Real k_C_photo = 3.5e-10*G_CI;
-  Real k_Cplus_e = CII_rec_rate_(T);
+  Real lnT, lnR, k_Cplus_e;
+  if (T < 10.) {
+    k_Cplus_e = 9.982641225129824e-11;
+  } else {
+    lnT = log(T);
+    lnR = -0.7529152*lnT -21.293937;
+    k_Cplus_e = exp(lnR);
+  }
   Real psi_gr = 1.7 * G_PE * sqrt(T)/(nH * x_e + small_) + small_;
   const Real cCp_[7] = {45.58, 6.089e-3, 1.128, 4.331e2, 4.845e-2,
                         0.8120, 1.333e-4};
@@ -535,7 +520,7 @@ Real fHplus(const Real x_e, const Real x_Cplus, const Real x_H2,
   Real k_cr_H = xi_CR * (2.3*x_H2 + 1.5*x_H);
   Real k_coll = 0;
   Real lnTe = log(T * 8.6173e-5);
-  const Real T_coll = 7.0e2;
+  const Real T_coll = 3.0e3;
   if (T > T_coll) {
     k_coll = exp( -3.271396786e1 + 
                         (1.35365560e1 + (- 5.73932875 + (1.56315498 
@@ -554,6 +539,7 @@ Real fHplus_gr(const Real x_e, const Real x_H2,
                const Real nH, const Real T, const Real Z_d, const Real xi_CR, 
                const Real G_PE) {
   const Real small_ = 1e-50;
+  Real xi_CR0 = MAX(xi_CR, 1e-20);
   Real k_Hplus_e = 2.753e-14 * pow( 315614.0 / T, 1.5) * pow( 
                1.0 + pow( 115188.0 / T, 0.407) , -2.242 );
   const Real cHp_[7] = {12.25, 8.074e-6, 1.378, 5.087e2,
@@ -566,10 +552,10 @@ Real fHplus_gr(const Real x_e, const Real x_H2,
                                *pow( psi_gr, -cHp_[5]-cHp_[6]*log(T) ) 
                  ) 
               ) * Z_d;
-  Real k_cr1 = xi_CR * (1.5 - 0.7*x_H2);
+  Real k_cr1 = xi_CR0 * (1.5 - 0.7*x_H2);
   Real k_coll = 0;
   Real lnTe = log(T * 8.6173e-5);
-  const Real T_coll = 7.0e2;
+  const Real T_coll = 3.0e3;
   if (T > T_coll) {
     k_coll = exp( -3.271396786e1 + 
                         (1.35365560e1 + (- 5.73932875 + (1.56315498 
@@ -578,8 +564,8 @@ Real fHplus_gr(const Real x_e, const Real x_H2,
           *lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe)*lnTe
                        );
   }
-  Real a = nH * (k_Hplus_e + k_coll) - 1.5*xi_CR;
-  Real b = k_cr1 - (1.-2.*x_H2)*nH*k_coll + nH*k_Hplus_gr + (1.-2.*x_H2)*1.5*xi_CR;
+  Real a = nH * (k_Hplus_e + k_coll) - 1.5*xi_CR0;
+  Real b = k_cr1 - (1.-2.*x_H2)*nH*k_coll + nH*k_Hplus_gr + (1.-2.*x_H2)*1.5*xi_CR0;
   Real c = -(1.-2.*x_H2)*k_cr1;
   Real x_Hplus = (-b + sqrt(b*b-4.*a*c))/(2.*a);
   x_Hplus = MIN(x_Hplus, 1.0);
@@ -596,7 +582,7 @@ Real fHplus_ng(const Real x_H2,
   Real k_cr_H = xi_CR * (2.3*x_H2 + 1.5*x_H_cr);
   Real k_coll = 0;
   Real lnTe = log(T * 8.6173e-5);
-  const Real T_coll = 7.0e2;
+  const Real T_coll = 3.0e3;
   if (T > T_coll) {
     k_coll = exp( -3.271396786e1 + 
                         (1.35365560e1 + (- 5.73932875 + (1.56315498 
@@ -761,23 +747,6 @@ Real heatingH2pump(const Real x_HI, const Real x_H2, const Real nH,
   const Real ncr = 1.0e6 / sqrt(T) / de;
   const Real f = 1. / (1. + ncr/nH);
   return dot_xH2_photo * 9. * 2.2*f * eV_;
-}
-
-Real CII_rec_rate_(const Real temp) {
-  Real A, B, T0, T1, C, T2, BN, term1, term2, alpharr, alphadr;
-  A = 2.995e-9;
-  B = 0.7849;
-  T0 =  6.670e-3;
-  T1 = 1.943e6;
-  C = 0.1597;
-  T2 = 4.955e4;
-  BN = B + C * exp(-T2/temp);
-  term1 = sqrt(temp/T0);
-  term2 = sqrt(temp/T1);
-  alpharr = A / ( term1*pow(1.0+term1, 1.0-BN) * pow(1.0+term2, 1.0+BN) );
-  alphadr = pow( temp, -3.0/2.0 ) * ( 6.346e-9 * exp(-1.217e1/temp) +
-        9.793e-09 * exp(-7.38e1/temp) + 1.634e-06 * exp(-1.523e+04/temp) );
-  return (alpharr+alphadr);
 }
 
 Real q10CII_(const Real nHI, const Real nH2, const Real ne, const Real T) {
@@ -1096,6 +1065,10 @@ Real cooling(const Real x_e, const Real x_HI, const Real x_H2,
              const Real x_Cplus, const Real x_CI, const Real x_CO, const Real x_OI, 
              const Real nH, const Real T, const Real dvdr,
              const Real Z, const Real G_PE) {
+  const Real xCtot=xCstd*Z;
+  const Real xOtot=xOstd*Z;
+  const Real factor = 0.1;
+  const Real T_Lya = 1e3;
   const Real log10T = log10(T);
   const Real T_cold = 1.0e4;
   const Real T_hot = pow(10, 4.2);
@@ -1107,10 +1080,26 @@ Real cooling(const Real x_e, const Real x_HI, const Real x_H2,
     return coolingHot(T, Z);
   } else if (log10T > log10T_cold) {
     c_Lya = coolingLya(x_e, x_HI, nH, T_cold);
-    c_OI = coolingOI(x_e, x_OI, x_HI, x_H2, nH, T_cold);
-    c_CII = coolingCII(x_e, x_Cplus, x_HI, x_H2, nH, T_cold);
-    c_CI = coolingCI(x_e, x_CI, x_HI, x_H2, nH, T_cold);
-    c_CO = coolingCO(x_e, x_CO, x_HI, x_H2, nH, T_cold, dvdr);
+    if (x_OI < xOtot*factor) {
+      c_OI = 0.;
+    } else {
+      c_OI = coolingOI(x_e, x_OI, x_HI, x_H2, nH, T_cold);
+    }
+    if (x_Cplus < xCtot*factor) {
+      c_CII = 0.;
+    } else {
+      c_CII = coolingCII(x_e, x_Cplus, x_HI, x_H2, nH, T_cold);
+    }
+    if (x_CI < xCtot*factor) {
+      c_CI = 0.;
+    } else {
+      c_CI = coolingCI(x_e, x_CI, x_HI, x_H2, nH, T_cold);
+    }
+    if (x_CO < xCtot*factor) {
+      c_CO = 0.;
+    } else {
+      c_CO = coolingCO(x_e, x_CO, x_HI, x_H2, nH, T_cold, dvdr);
+    }
     c_Rec = coolingRec(x_e, nH, T_cold, Z, G_PE);
     c_cold = (c_Lya + c_OI + c_CII + c_CI + c_CO + c_Rec)/nH;
     c_hot = coolingHot(T_hot, Z);
@@ -1118,11 +1107,31 @@ Real cooling(const Real x_e, const Real x_HI, const Real x_H2,
                            log10(c_cold), log10(c_hot), log10T);
     return pow(10, log10L);
   } else {
-    c_Lya = coolingLya(x_e, x_HI, nH, T);
-    c_OI = coolingOI(x_e, x_OI, x_HI, x_H2, nH, T);
-    c_CII = coolingCII(x_e, x_Cplus, x_HI, x_H2, nH, T);
-    c_CI = coolingCI(x_e, x_CI, x_HI, x_H2, nH, T);
-    c_CO = coolingCO(x_e, x_CO, x_HI, x_H2, nH, T, dvdr);
+    if (T < T_Lya) {
+      c_Lya = 0.;
+    } else {
+      c_Lya = coolingLya(x_e, x_HI, nH, T);
+    }
+    if (x_OI < xOtot*factor) {
+      c_OI = 0.;
+    } else {
+      c_OI = coolingOI(x_e, x_OI, x_HI, x_H2, nH, T);
+    }
+    if (x_Cplus < xCtot*factor) {
+      c_CII = 0.;
+    } else {
+      c_CII = coolingCII(x_e, x_Cplus, x_HI, x_H2, nH, T);
+    }
+    if (x_CI < xCtot*factor) {
+      c_CI = 0.;
+    } else {
+      c_CI = coolingCI(x_e, x_CI, x_HI, x_H2, nH, T);
+    }
+    if (x_CO < xCtot*factor) {
+      c_CO = 0.;
+    } else {
+      c_CO = coolingCO(x_e, x_CO, x_HI, x_H2, nH, T, dvdr);
+    }
     c_Rec = coolingRec(x_e, nH, T, Z, G_PE);
     return (c_Lya + c_OI + c_CII + c_CI + c_CO + c_Rec)/nH;
   }
