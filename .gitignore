@@ -5,6 +5,7 @@
 *.pyc
 *.dylib
 out/
+out_fast/
 bin/
 lib/
 pickle/
