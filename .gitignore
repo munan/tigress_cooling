@@ -3,6 +3,9 @@
 *.swp
 *.exe
 *.pyc
-Makefile
+*.dylib
 out/
-out_fast/
+bin/
+lib/
+pickle/
+figure/
